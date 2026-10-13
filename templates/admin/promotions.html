@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf, media with context %}
+{% block title %}Promotions · Sanskriti Admin{% endblock %}
+{% macro audience_select() %}
+  <select name="audience" aria-label="Who should get it">
+    {% for key, (label, _) in audiences.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+  </select>
+{% endmacro %}
+{% block content %}
+<header class="page-head"><h1>Promotions</h1><p class="muted">Promotions show on every student's home page and the public site. Send them on WhatsApp too.</p></header>
+
+<section class="card">
+  <h2>New promotion</h2>
+  <form method="post" enctype="multipart/form-data" class="stack">{{ csrf() }}
+    <label class="field"><span>Title</span><input name="title" required placeholder="e.g. New Kathak batch starting this Saturday"></label>
+    <label class="field"><span>Message</span><textarea name="body" rows="3" placeholder="Details, dates, offers..."></textarea></label>
+    <div class="grid2">
+      <label class="field"><span>Photo or video</span><input type="file" name="media" accept="image/*,video/*"></label>
+      <label class="field"><span>For class (adds an "I'm interested" button)</span>
+        <select name="class_id"><option value="">Any / general</option>{% for c in classes %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></label>
+    </div>
+    <div class="send-row">
+      <label class="check"><input type="checkbox" name="send" value="1" checked> Also send on WhatsApp to</label>
+      {{ audience_select() }}
+    </div>
+    <button class="btn">Publish</button>
+  </form>
+</section>
+
+<div class="promo-admin-list">
+{% for p in promos %}
+  <article class="card promo-admin {{ 'inactive' if not p.active }}">
+    {{ media(p, 'promo-media') }}
+    <div class="stack">
+      <div><h3>{{ p.title }} {% if not p.active %}<span class="pill">Hidden</span>{% endif %}</h3>
+        {% if p.cname %}<span class="tag">{{ p.cname }}</span>{% endif %}
+        <p>{{ p.body }}</p></div>
+      <form method="post" action="{{ url_for('admin_promotion_action', pid=p.id) }}" class="send-row" data-confirm="Send this promotion on WhatsApp now?">{{ csrf() }}
+        <input type="hidden" name="action" value="send">
+        {{ audience_select() }}<button class="btn btn-sm">Send on WhatsApp</button>
+      </form>
+      <div>
+        <form method="post" action="{{ url_for('admin_promotion_action', pid=p.id) }}" class="inline">{{ csrf() }}<input type="hidden" name="action" value="toggle"><button class="btn btn-sm btn-ghost">{{ 'Hide' if p.active else 'Show' }}</button></form>
+        <form method="post" action="{{ url_for('admin_promotion_action', pid=p.id) }}" class="inline" data-confirm="Delete this promotion?">{{ csrf() }}<input type="hidden" name="action" value="delete"><button class="btn btn-sm btn-ghost danger">Delete</button></form>
+      </div>
+    </div>
+  </article>
+{% else %}<p class="empty">No promotions yet.</p>{% endfor %}
+</div>
+{% endblock %}

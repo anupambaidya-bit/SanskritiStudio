@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="card center stack">
+  <h1>{{ title }}</h1>
+  <p class="muted">{{ message }}</p>
+  <p><a class="btn" href="{{ url_for('index') }}">Go home</a></p>
+</section>
+{% endblock %}

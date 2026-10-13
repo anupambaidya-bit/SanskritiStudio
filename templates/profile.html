@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf with context %}
+{% block title %}{{ 'Sign up' if first_time else 'Profile' }} · Sanskriti{% endblock %}
+{% set u = form or g.user %}
+{% set picked = form.getlist('classes') | map('int') | list if form else mine.keys() | list %}
+{% set picked_demos = form.getlist('demos') | map('int') | list if form else [] %}
+{% block content %}
+<form method="post" class="stack profile-form" id="profile-form">
+  {{ csrf() }}
+  <header class="page-head">
+    <h1>{{ 'Welcome! Tell us about you' if first_time else 'Your profile' }}</h1>
+    <p class="muted">{{ g.user.phone | phone }}</p>
+  </header>
+
+  <section class="card stack">
+    <h2>About the student</h2>
+    <div class="grid2">
+      <label class="field"><span>Student's name</span>
+        <input name="name" required value="{{ u.name or '' }}" autocomplete="name" placeholder="Full name"></label>
+      <label class="field"><span>Age</span>
+        <input name="age" type="number" min="2" max="100" required value="{{ u.age or '' }}" id="age" inputmode="numeric"></label>
+    </div>
+    <label class="field parent-field" id="parent-field">
+      <span>Parent / guardian's name <em>(needed for students under 14)</em></span>
+      <input name="parent_name" id="parent_name" value="{{ u.parent_name or '' }}" placeholder="Parent's full name">
+    </label>
+    <label class="field"><span>Community / where you're from</span>
+      <input name="community" list="communities" value="{{ u.community or '' }}" placeholder="e.g. Ragam Gardens, Odia Samaj, ...">
+      <datalist id="communities">{% for c in communities %}<option value="{{ c }}">{% endfor %}</datalist>
+    </label>
+  </section>
+
+  <section class="card stack">
+    <h2>Which classes interest you?</h2>
+    <p class="muted">Tap all that apply.</p>
+    <div class="pick-grid">
+      {% for c in classes %}
+        {% set e = mine.get(c.id) %}
+        {% set locked = e and e.status not in ('interested',) %}
+        <label class="pick" style="--c: {{ c.color }}">
+          <input type="checkbox" name="classes" value="{{ c.id }}" {{ 'checked' if c.id in picked or locked }} {{ 'disabled' if locked }}>
+          {% if locked %}<input type="hidden" name="classes" value="{{ c.id }}">{% endif %}
+          {% if c.image %}<img src="{{ media_url(c.image) }}" alt="" loading="lazy">{% endif %}
+          <span class="pick-body">
+            <b>{{ c.name }}</b>
+            <small>{% for b in batches[c.id] %}{{ b.days | days }} {{ b.start_time | t12 }}{{ ' · ' if not loop.last }}{% endfor %}</small>
+            {% if c.fee %}<small>{{ c.fee | money }}/month</small>{% endif %}
+            {% if locked %}<small class="pill pill-{{ e.status }}">{{ STATUS_LABELS[e.status] }}</small>{% endif %}
+          </span>
+          <span class="tick">✓</span>
+        </label>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if demos %}
+  <section class="card stack">
+    <h2>Try a free demo class</h2>
+    <p class="muted">Optional. Pick one and we'll save your spot.</p>
+    <div class="demo-pick">
+      {% for d in demos %}
+        {% set e = mine.get(d.class_id) %}
+        {% set booked = e and e.demo_id == d.id and e.status == 'demo' %}
+        <label class="pick-row" style="--c: {{ d.color }}">
+          <input type="checkbox" name="demos" value="{{ d.id }}" {{ 'checked' if booked or d.id in picked_demos }} {{ 'disabled' if booked }}>
+          <span><b>{{ d.cname }}</b> · {{ d.date | nicedate }}, {{ d.start_time | t12 }}<br><small class="muted">📍 {{ d.location or setting('address') }}</small></span>
+          {% if booked %}<span class="pill pill-ok">Booked</span>{% endif %}
+        </label>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <button class="btn btn-lg btn-block sticky-cta">{{ 'Join Sanskriti' if first_time else 'Save' }}</button>
+</form>
+{% endblock %}

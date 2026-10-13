@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf, promo_card, demo_card, map_block, stars, status_pill with context %}
+{% block content %}
+<header class="page-head">
+  <h1>Namaste, {{ g.user.name.split(' ')[0] }} 🙏</h1>
+  {% if g.user.parent_name %}<p class="muted">Parent: {{ g.user.parent_name }}</p>{% endif %}
+</header>
+
+{# ---------- things that need the student's attention, most important first ---------- #}
+{% for e in feedback_due %}
+  <a class="action-card action-feedback" href="{{ url_for('demo_feedback', enrollment_id=e.id) }}">
+    <span class="action-icon">★</span>
+    <span><b>How was your {{ e.cname }} demo?</b><br>Share feedback and pick your batch to continue.</span>
+    <span class="chev">›</span>
+  </a>
+{% endfor %}
+
+{% for p in payments %}
+  {% if p.status == 'pending' %}
+  <a class="action-card action-pay" href="{{ url_for('pay', payment_id=p.id) }}">
+    <span class="action-icon">₹</span>
+    <span><b>{{ p.amount | money }} due · {{ p.cname }}</b><br>{{ p.period | period }} fee. Pay with PhonePe or Google Pay.</span>
+    <span class="chev">›</span>
+  </a>
+  {% else %}
+  <div class="action-card action-wait">
+    <span class="action-icon">⏳</span>
+    <span><b>{{ p.amount | money }} · {{ p.cname }}</b><br>Payment for {{ p.period | period }} sent, waiting for confirmation.</span>
+  </div>
+  {% endif %}
+{% endfor %}
+
+{% for e in regular_due %}
+  <details class="action-card action-rate">
+    <summary><span class="action-icon">✎</span><span><b>How are your {{ e.cname }} classes going?</b><br>Tap to leave a quick rating.</span></summary>
+    <form method="post" action="{{ url_for('regular_feedback') }}" class="stack">
+      {{ csrf() }}<input type="hidden" name="class_id" value="{{ e.class_id }}">
+      {{ stars('rating', true) }}
+      <textarea name="comment" rows="2" placeholder="Anything you'd like us to know? (optional)"></textarea>
+      <button class="btn btn-sm">Send feedback</button>
+    </form>
+  </details>
+{% endfor %}
+
+{# ---------- my classes ---------- #}
+{% if next_classes %}
+<section class="section">
+  <h2>Your next classes</h2>
+  <div class="next-list">
+    {% for n in next_classes %}
+      <div class="next" style="--c: {{ n.color }}"><b>{{ n.date | nicedate }}</b><span>{{ n.time | t12 }} · {{ n.cname }}</span></div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="section">
+  <div class="section-head"><h2>My classes</h2><a href="{{ url_for('profile') }}">Add classes</a></div>
+  {% if enrollments %}
+  <div class="my-classes">
+    {% for e in enrollments %}
+      <div class="my-class" style="--c: {{ e.color }}">
+        <div>
+          <b>{{ e.cname }}</b>
+          {% if e.status == 'subscribed' and e.bdays %}<small>{{ e.bdays | days }} · {{ e.bstart | t12 }}–{{ e.bend | t12 }}</small>
+          {% elif e.status == 'demo' %}<small>Demo on {{ e.demo_date | nicedate }} at {{ e.demo_time | t12 }}</small>
+          {% elif e.bdays %}<small>Preferred: {{ e.bdays | days }} {{ e.bstart | t12 }}</small>{% endif %}
+        </div>
+        {{ status_pill(e.status) }}
+      </div>
+    {% endfor %}
+  </div>
+  {% else %}
+    <p class="muted">You haven't picked any classes yet. <a href="{{ url_for('profile') }}">Choose classes</a>.</p>
+  {% endif %}
+</section>
+
+{% if demos %}
+<section class="section" id="demos">
+  <h2>Upcoming free demos</h2>
+  <div class="demo-list">
+    {% for d in demos %}{{ demo_card(d, booked=d.id in booked_demo_ids) }}{% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if promos %}
+<section class="section">
+  <h2>What's new at Sanskriti</h2>
+  <div class="promo-strip">{% for p in promos %}{{ promo_card(p, true) }}{% endfor %}</div>
+</section>
+{% endif %}
+
+{{ map_block() }}
+{% endblock %}

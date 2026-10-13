@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf with context %}
+{% block title %}Funnel · Sanskriti Admin{% endblock %}
+{% macro act(e, action, label, cls='btn-sm') %}
+  <form method="post" action="{{ url_for('admin_enrollment', eid=e.id) }}" class="inline">{{ csrf() }}
+    <input type="hidden" name="action" value="{{ action }}"><input type="hidden" name="back" value="{{ request.full_path }}">
+    <button class="btn {{ cls }}">{{ label }}</button>
+  </form>
+{% endmacro %}
+{% macro person(e) %}
+  <div class="pcard">
+    <div class="pcard-top">
+      <b>{{ e.uname or 'No name yet' }}</b>
+      <a class="wa-link" href="{{ wa_link(e.phone) }}" target="_blank" rel="noopener" title="Chat on WhatsApp">{{ e.phone | phone }}</a>
+    </div>
+    <small class="muted">
+      <span class="dot" style="--c: {{ e.color }}"></span>{{ e.cname }}{% if e.age %} · {{ e.age }} yrs{% endif %}{% if e.parent_name %} · parent {{ e.parent_name }}{% endif %}{% if e.community %} · {{ e.community }}{% endif %}
+    </small>
+    {% if e.status == 'demo' %}<small>Demo {{ e.demo_date | nicedate }} {{ e.demo_time | t12 }}</small>{% endif %}
+    {% if e.bdays %}<small>{{ 'Batch' if e.status == 'subscribed' else 'Prefers' }}: {{ e.bdays | days }} {{ e.bstart | t12 }}</small>{% endif %}
+    <div class="pcard-actions">{{ caller() }}</div>
+  </div>
+{% endmacro %}
+
+{% block content %}
+<header class="page-head row">
+  <h1>Student funnel</h1>
+  <form method="get" class="inline">
+    <select name="class" onchange="this.form.submit()" aria-label="Filter by class">
+      <option value="">All classes</option>
+      {% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if class_filter == c.id }}>{{ c.name }}</option>{% endfor %}
+    </select>
+  </form>
+</header>
+
+<div class="stats">
+  <a href="#col-interested" class="stat"><b>{{ stats.interested }}</b><span>Interested</span></a>
+  <a href="#col-demo" class="stat"><b>{{ stats.demo }}</b><span>Demo booked</span></a>
+  <a href="#col-demo_done" class="stat"><b>{{ stats.demo_done }}</b><span>Feedback pending</span></a>
+  <a href="#col-subscribed" class="stat"><b>{{ stats.subscribed }}</b><span>Subscribed</span></a>
+  <a href="#payments" class="stat stat-warn"><b>{{ stats.due_amount | money }}</b><span>{{ stats.due_count }} payment{{ 's' if stats.due_count != 1 }} pending</span></a>
+  <a href="#payments" class="stat stat-ok"><b>{{ stats.paid_amount | money }}</b><span>Collected this month</span></a>
+</div>
+
+<section class="quick card">
+  <b>WhatsApp reminders</b>
+  {% for kind, label in [('payments','Pending payments'),('feedback','Demo feedback'),('classes',"Tomorrow's classes"),('demos',"Tomorrow's demos"),('invites','Invite interested to demos')] %}
+    <form method="post" action="{{ url_for('admin_remind', kind=kind) }}" class="inline" data-confirm="Send '{{ label }}' reminders on WhatsApp now?">{{ csrf() }}
+      <button class="btn btn-ghost btn-sm">{{ label }}</button>
+    </form>
+  {% endfor %}
+</section>
+
+{% if recent_demos %}
+<section class="card attn">
+  <h2>Mark demo attendance</h2>
+  {% for d in recent_demos %}
+    <div class="row-line">
+      <span><b>{{ d.cname }}</b> demo, {{ d.date | nicedate }} · {{ d.booked }} booked</span>
+      <form method="post" action="{{ url_for('admin_demo_attended', demo_id=d.id) }}" class="inline">{{ csrf() }}
+        <button class="btn btn-sm">All attended → ask for feedback</button>
+      </form>
+    </div>
+  {% endfor %}
+  <p class="tiny muted">Or mark people one by one in the "Demo booked" column.</p>
+</section>
+{% endif %}
+
+<div class="board">
+  <section class="col" id="col-interested">
+    <h3>Interested <span>{{ cols.interested | length }}</span></h3>
+    {% for e in cols.interested %}{% call person(e) %}{{ act(e, 'invite', 'Invite to demo', 'btn-sm btn-ghost') }}{{ act(e, 'drop', '✕', 'btn-sm btn-ghost') }}{% endcall %}
+    {% else %}<p class="empty">Nobody here yet.</p>{% endfor %}
+  </section>
+  <section class="col" id="col-demo">
+    <h3>Demo booked <span>{{ cols.demo | length }}</span></h3>
+    {% for e in cols.demo %}{% call person(e) %}{{ act(e, 'attended', 'Attended') }}{{ act(e, 'reopen', 'No-show', 'btn-sm btn-ghost') }}{% endcall %}
+    {% else %}<p class="empty">No demo bookings.</p>{% endfor %}
+  </section>
+  <section class="col" id="col-demo_done">
+    <h3>Feedback pending <span>{{ cols.demo_done | length }}</span></h3>
+    {% for e in cols.demo_done %}{% call person(e) %}{{ act(e, 'remind_feedback', 'Remind', 'btn-sm btn-ghost') }}{{ act(e, 'subscribe', 'Subscribe') }}{% endcall %}
+    {% else %}<p class="empty">All caught up.</p>{% endfor %}
+  </section>
+  <section class="col" id="col-subscribed">
+    <h3>Subscribed <span>{{ cols.subscribed | length }}</span></h3>
+    {% for e in cols.subscribed %}{% call person(e) %}{% endcall %}
+    {% else %}<p class="empty">No students yet.</p>{% endfor %}
+  </section>
+</div>
+
+<section class="card" id="payments">
+  <div class="section-head"><h2>Payments</h2><span class="muted">{{ stats.due_count }} pending · {{ stats.due_amount | money }}</span></div>
+  {% if due %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Student</th><th>Class</th><th>Month</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for p in due %}
+      <tr class="{{ 'hl' if p.status == 'submitted' }}">
+        <td><b>{{ p.uname }}</b><br><a class="wa-link" href="{{ wa_link(p.phone) }}" target="_blank" rel="noopener">{{ p.phone | phone }}</a></td>
+        <td>{{ p.cname }}</td><td>{{ p.period | period }}</td><td>{{ p.amount | money }}</td>
+        <td>{% if p.status == 'submitted' %}<span class="pill pill-subscribed">Paid via {{ p.method }}{% if p.reference %} · {{ p.reference }}{% endif %}, confirm?</span>{% else %}<span class="pill pill-warn">Pending</span>{% endif %}</td>
+        <td class="nowrap">
+          <form method="post" action="{{ url_for('admin_payment', pid=p.id) }}" class="inline">{{ csrf() }}<input type="hidden" name="action" value="paid">
+            <button class="btn btn-sm">{{ 'Confirm' if p.status == 'submitted' else 'Mark paid' }}</button></form>
+          {% if p.status == 'pending' %}
+          <form method="post" action="{{ url_for('admin_payment', pid=p.id) }}" class="inline">{{ csrf() }}<input type="hidden" name="action" value="remind">
+            <button class="btn btn-sm btn-ghost">Remind</button></form>
+          {% endif %}
+          <form method="post" action="{{ url_for('admin_payment', pid=p.id) }}" class="inline" data-confirm="Waive this fee?">{{ csrf() }}<input type="hidden" name="action" value="waive">
+            <button class="btn btn-sm btn-ghost" title="Waive">Waive</button></form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}<p class="empty">No pending payments. 🎉</p>{% endif %}
+
+  {% if paid %}
+  <details class="paid-list"><summary>Paid this month ({{ paid | length }} · {{ stats.paid_amount | money }})</summary>
+    <ul>{% for p in paid %}<li>{{ p.uname }} · {{ p.cname }} · {{ p.amount | money }} · {{ p.method or '' }} {{ p.paid_at[:10] }}
+      <form method="post" action="{{ url_for('admin_payment', pid=p.id) }}" class="inline">{{ csrf() }}<input type="hidden" name="action" value="undo"><button class="linkbtn">undo</button></form></li>{% endfor %}</ul>
+  </details>
+  {% endif %}
+</section>
+
+<div class="grid2">
+  <section class="card">
+    <div class="section-head"><h2>Upcoming demos</h2><a href="{{ url_for('admin_classes') }}">Add demo</a></div>
+    {% for d in demos %}
+      <div class="row-line"><span><span class="dot" style="--c: {{ d.color }}"></span><b>{{ d.cname }}</b> · {{ d.date | nicedate }} {{ d.start_time | t12 }}</span><span class="muted">{{ d.booked }} booked</span></div>
+    {% else %}<p class="empty">No upcoming demos.</p>{% endfor %}
+  </section>
+  <section class="card">
+    <h2>Latest feedback</h2>
+    {% for f in feedback %}
+      <div class="fb"><b>{{ f.uname }}</b> · {{ f.cname }} · <span class="gold">{{ '★' * (f.rating or 0) }}</span> <small class="muted">{{ f.kind }}</small>{% if f.comment %}<br><span>"{{ f.comment }}"</span>{% endif %}</div>
+    {% else %}<p class="empty">No feedback yet.</p>{% endfor %}
+  </section>
+</div>
+
+{% if cols.dropped %}
+<details class="card"><summary>Not continuing ({{ cols.dropped | length }})</summary>
+  <div class="board board-flat">{% for e in cols.dropped %}{% call person(e) %}{{ act(e, 'reopen', 'Move to Interested', 'btn-sm btn-ghost') }}{% endcall %}{% endfor %}</div>
+</details>
+{% endif %}
+{% endblock %}

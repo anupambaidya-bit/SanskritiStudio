@@ -1,0 +1,73 @@
+{% macro csrf() %}<input type="hidden" name="_csrf" value="{{ csrf_token() }}">{% endmacro %}
+
+{% macro media(item, cls='') %}
+  {% if item.media_type == 'video' %}
+    <video class="{{ cls }}" src="{{ media_url(item.media) }}#t=0.5" controls playsinline preload="metadata" muted></video>
+  {% elif item.media %}
+    <img class="{{ cls }}" src="{{ media_url(item.media) }}" alt="{{ item.title }}" loading="lazy">
+  {% endif %}
+{% endmacro %}
+
+{% macro promo_card(p, logged_in=false) %}
+  <article class="promo">
+    {{ media(p, 'promo-media') }}
+    <div class="promo-body">
+      {% if p.cname %}<span class="tag">{{ p.cname }}</span>{% endif %}
+      <h3>{{ p.title }}</h3>
+      {% if p.body %}<p>{{ p.body }}</p>{% endif %}
+      {% if p.class_id and logged_in %}
+        <form method="post" action="{{ url_for('join_class', class_id=p.class_id) }}">{{ csrf() }}
+          <button class="btn btn-sm">I'm interested</button>
+        </form>
+      {% elif not logged_in %}
+        <a class="btn btn-sm" href="{{ url_for('login') }}">Join with WhatsApp</a>
+      {% endif %}
+    </div>
+  </article>
+{% endmacro %}
+
+{% macro demo_card(d, action=true, booked=false) %}
+  <article class="demo" style="--c: {{ d.color }}">
+    <div class="demo-date"><b>{{ d.date[8:10] }}</b><span>{{ d.date | nicedate | truncate(3, true, '') }}</span></div>
+    <div class="demo-info">
+      <h4>{{ d.cname }}</h4><small class="tag">Free demo</small>
+      <p>{{ d.date | nicedate }} · {{ d.start_time | t12 }}{% if d.end_time %} – {{ d.end_time | t12 }}{% endif %}</p>
+      <p class="muted">📍 {{ d.location or setting('address') }}</p>
+    </div>
+    {% if action %}
+      {% if booked %}
+        <span class="pill pill-ok">Booked ✓</span>
+      {% elif g.user %}
+        <form method="post" action="{{ url_for('demo_book', demo_id=d.id) }}">{{ csrf() }}
+          <button class="btn btn-sm">Book</button>
+        </form>
+      {% else %}
+        <a class="btn btn-sm" href="{{ url_for('login') }}">Book</a>
+      {% endif %}
+    {% endif %}
+  </article>
+{% endmacro %}
+
+{% macro map_block() %}
+  <section class="card map-card" id="visit">
+    <div class="map-head">
+      <div>
+        <h2>Visit us</h2>
+        <p>{{ setting('address') }}</p>
+      </div>
+      <a class="btn btn-ghost btn-sm" href="{{ maps_link }}" target="_blank" rel="noopener">Open in Google Maps</a>
+    </div>
+    <iframe class="map" src="{{ maps_embed }}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Map to {{ setting('studio_name') }}"></iframe>
+  </section>
+{% endmacro %}
+
+{% macro stars(name='rating', required=false) %}
+  <div class="stars">
+    {% for i in range(5, 0, -1) %}
+      <input type="radio" id="{{ name }}-{{ i }}" name="{{ name }}" value="{{ i }}" {{ 'required' if required and i == 5 }}>
+      <label for="{{ name }}-{{ i }}" title="{{ i }} star{{ 's' if i > 1 }}">★</label>
+    {% endfor %}
+  </div>
+{% endmacro %}
+
+{% macro status_pill(s) %}<span class="pill pill-{{ s }}">{{ STATUS_LABELS[s] }}</span>{% endmacro %}

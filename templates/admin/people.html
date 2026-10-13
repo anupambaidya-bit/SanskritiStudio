@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import status_pill with context %}
+{% block title %}People · Sanskriti Admin{% endblock %}
+{% block content %}
+<header class="page-head row">
+  <h1>People <span class="muted">({{ users | length }})</span></h1>
+  <div>
+    <form method="get" class="inline"><input type="search" name="q" value="{{ q }}" placeholder="Search name, phone, community"></form>
+    <a class="btn btn-sm btn-ghost" href="{{ url_for('admin_people', q=q, format='csv') }}">Download CSV</a>
+  </div>
+</header>
+<div class="table-wrap card">
+<table class="table">
+  <thead><tr><th>Name</th><th>WhatsApp</th><th>Age</th><th>Community</th><th>Classes</th><th>Fees due</th><th>Joined</th></tr></thead>
+  <tbody>
+  {% for u in users %}
+    <tr>
+      <td><b>{{ u.name or '(not finished signing up)' }}</b>{% if u.parent_name %}<br><small class="muted">Parent: {{ u.parent_name }}</small>{% endif %}</td>
+      <td><a class="wa-link" href="{{ wa_link(u.phone) }}" target="_blank" rel="noopener">{{ u.phone | phone }}</a></td>
+      <td>{{ u.age or '' }}{% if u.age and u.age < 14 %} <span class="pill pill-warn">minor</span>{% endif %}</td>
+      <td>{{ u.community or '' }}</td>
+      <td>{% for e in enr[u.id] %}<div class="nowrap">{{ e.cname }} {{ status_pill(e.status) }}</div>{% endfor %}</td>
+      <td>{% if dues.get(u.id) %}<span class="pill pill-warn">{{ dues[u.id] | money }}</span>{% endif %}</td>
+      <td class="nowrap">{{ u.created_at[:10] | nicedate }}</td>
+    </tr>
+  {% else %}<tr><td colspan="7" class="empty">No one yet.</td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

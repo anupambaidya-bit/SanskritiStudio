@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf with context %}
+{% block title %}Calendar · Sanskriti{% endblock %}
+{% set qs = {'class': class_filter} if class_filter else {} %}
+{% block content %}
+<header class="cal-head">
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('calendar_view', m=prev_m.strftime('%Y-%m'), **qs) }}" aria-label="Previous month">‹</a>
+  <h1>{{ first.strftime('%B %Y') }}</h1>
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('calendar_view', m=next_m.strftime('%Y-%m'), **qs) }}" aria-label="Next month">›</a>
+</header>
+
+<div class="chips-filter">
+  <a href="{{ url_for('calendar_view', m=first.strftime('%Y-%m')) }}" class="fchip {{ 'active' if not class_filter }}">All classes</a>
+  {% for c in classes %}
+    <a href="{{ url_for('calendar_view', m=first.strftime('%Y-%m'), **{'class': c.id}) }}" class="fchip {{ 'active' if class_filter == c.id }}" style="--c: {{ c.color }}"><i></i>{{ c.name }}</a>
+  {% endfor %}
+</div>
+<p class="tiny muted legend"><span class="chip-demo-sample">Demo</span> free demo &nbsp; <span class="chip-mine-sample">★</span> your class. Tap any class to {{ 'see details' if g.user.role == 'admin' else 'choose it or book a demo' }}.</p>
+
+<div class="cal">
+  {% for dname in DAYS %}<div class="cal-dow">{{ dname }}</div>{% endfor %}
+  {% for week in weeks %}{% for d in week %}
+    <div class="cal-day {{ 'other' if d.month != first.month }} {{ 'today' if d == today_d }} {{ 'past' if d < today_d }}">
+      <span class="cal-num">{{ d.day }}</span>
+      {% for ev in events.get(d, []) %}
+        <button type="button" class="chip {{ 'chip-demo' if ev.kind == 'demo' }} {{ 'chip-mine' if ev.mine }}" style="--c: {{ ev.color }}" data-ev='{{ ev.json }}' data-date="{{ d.strftime('%a, %d %b') }}">
+          <span class="chip-time">{{ ev.start | t12 | replace(':00', '') }}</span> {{ ev.title }}
+        </button>
+      {% endfor %}
+    </div>
+  {% endfor %}{% endfor %}
+</div>
+
+{# Agenda list: shown instead of the grid on phones #}
+<div class="agenda">
+  {% for week in weeks %}{% for d in week %}
+    {% if d.month == first.month and d >= today_d.replace(day=1) and events.get(d) %}
+      <div class="agenda-day {{ 'today' if d == today_d }} {{ 'past' if d < today_d }}">
+        <div class="agenda-date"><b>{{ d.day }}</b><span>{{ d.strftime('%a') }}</span></div>
+        <div class="agenda-evs">
+          {% for ev in events[d] %}
+            <button type="button" class="agenda-ev {{ 'chip-demo' if ev.kind == 'demo' }} {{ 'chip-mine' if ev.mine }}" style="--c: {{ ev.color }}" data-ev='{{ ev.json }}' data-date="{{ d.strftime('%a, %d %b') }}">
+              <span>{{ ev.when }}</span><b>{{ ev.title }}</b>
+            </button>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+  {% endfor %}{% endfor %}
+</div>
+
+<dialog id="ev-dialog" class="dialog">
+  <form method="dialog" class="dialog-close"><button aria-label="Close">×</button></form>
+  <p class="muted" id="ev-date"></p>
+  <h2 id="ev-title"></h2>
+  <p id="ev-when"></p>
+  <p class="muted" id="ev-info"></p>
+  <form method="post" id="ev-form">
+    {{ csrf() }}<input type="hidden" name="back" value="{{ request.full_path }}">
+    <button class="btn btn-block" id="ev-action"></button>
+  </form>
+</dialog>
+{% endblock %}

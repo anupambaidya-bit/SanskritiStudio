@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#4a2470">
+  <title>{% block title %}{{ setting('studio_name') }}{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+{% set is_admin = g.user and g.user.role == 'admin' %}
+<body class="{{ 'admin' if is_admin }} {{ 'has-bottomnav' if g.user and not is_admin }}">
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="{{ url_for('index') }}">
+      <span class="brand-mark">स</span>
+      <span><span class="brand-name">Sanskriti</span><span class="brand-sub">{{ 'Admin' if is_admin else 'Studio · Ragam Gardens' }}</span></span>
+    </a>
+    {% if g.user %}
+      <nav class="topnav">
+        {% if is_admin %}
+          {% set nav = [('admin_home','Funnel'),('admin_classes','Classes'),('admin_promotions','Promotions'),('calendar_view','Calendar'),('admin_people','People'),('admin_messages','Messages'),('admin_settings','Settings')] %}
+        {% else %}
+          {% set nav = [('home','Home'),('calendar_view','Calendar'),('profile','Profile')] %}
+        {% endif %}
+        {% for ep, label in nav %}
+          <a href="{{ url_for(ep) }}" class="{{ 'active' if request.endpoint == ep }}">{{ label }}</a>
+        {% endfor %}
+        <form method="post" action="{{ url_for('logout') }}" class="inline">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <button class="linkbtn">Log out</button>
+        </form>
+      </nav>
+    {% else %}
+      <a class="btn btn-sm" href="{{ url_for('login') }}">Log in</a>
+    {% endif %}
+  </div>
+</header>
+
+<main class="wrap">
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% if msgs %}<div class="flashes">{% for cat, m in msgs %}<div class="flash flash-{{ cat }}">{{ m }}</div>{% endfor %}</div>{% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+
+{% if g.user and not is_admin %}
+<nav class="bottomnav">
+  <a href="{{ url_for('home') }}" class="{{ 'active' if request.endpoint == 'home' }}"><span>⌂</span>Home</a>
+  <a href="{{ url_for('calendar_view') }}" class="{{ 'active' if request.endpoint == 'calendar_view' }}"><span>▦</span>Calendar</a>
+  <a href="{{ url_for('profile') }}" class="{{ 'active' if request.endpoint == 'profile' }}"><span>☺</span>Profile</a>
+</nav>
+{% endif %}
+
+<footer class="footer">
+  {{ setting('studio_name') }} · {{ setting('address') }} · <a href="{{ maps_link }}" target="_blank" rel="noopener">Directions</a>
+</footer>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

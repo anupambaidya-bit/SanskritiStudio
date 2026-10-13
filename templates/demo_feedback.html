@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf, stars with context %}
+{% set pre = request.args.get('batch', type=int) or e.batch_id %}
+{% block content %}
+<form method="post" class="stack">
+  {{ csrf() }}
+  <header class="page-head">
+    <h1>How was the {{ e.cname }} demo?</h1>
+    <p class="muted">Two quick steps and you're in.</p>
+  </header>
+
+  <section class="card stack">
+    <h2>1. Your rating</h2>
+    {{ stars('rating', true) }}
+    <textarea name="comment" rows="3" placeholder="What did you enjoy? Anything we can do better? (optional)"></textarea>
+  </section>
+
+  <section class="card stack">
+    <h2>2. Pick your batch</h2>
+    <div class="batch-pick">
+      {% for b in batches %}
+        <label class="pick-row" style="--c: {{ e.color }}">
+          <input type="radio" name="batch" value="{{ b.id }}" required {{ 'checked' if b.id == pre or (loop.first and not pre) }}>
+          <span><b>{{ b.days | days }}</b> · {{ b.start_time | t12 }} – {{ b.end_time | t12 }}{% if b.teacher %}<br><small class="muted">with {{ b.teacher }}</small>{% endif %}</span>
+        </label>
+      {% endfor %}
+      <label class="pick-row muted-row">
+        <input type="radio" name="batch" value="none" required>
+        <span>Not right now</span>
+      </label>
+    </div>
+    {% if e.fee %}<p class="muted">Monthly fee: <b>{{ e.fee | money }}</b>, payable by PhonePe / Google Pay.</p>{% endif %}
+    <p class="tiny muted"><a href="{{ url_for('calendar_view', **{'class': e.class_id}) }}">See all timings on the calendar</a></p>
+  </section>
+
+  <button class="btn btn-lg btn-block sticky-cta">Submit</button>
+</form>
+{% endblock %}

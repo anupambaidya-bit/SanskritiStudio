@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import promo_card, demo_card, map_block with context %}
+{% block content %}
+<section class="hero">
+  <img src="{{ media_url('seed-hero.jpg') }}" alt="Sanskriti students in performance costume">
+  <div class="hero-text">
+    <h1>Classical dance at {{ setting('studio_name') }}</h1>
+    <p>Odissi, Bharatanatyam and more at Ragam Gardens. Join with your WhatsApp number and book a free demo in a minute.</p>
+    <div class="hero-actions">
+      <a class="btn btn-lg" href="{{ url_for('login') }}">Join with WhatsApp</a>
+      <a class="btn btn-ghost btn-lg light" href="{{ url_for('login', **{'as': 'admin'}) }}">Admin login</a>
+    </div>
+  </div>
+</section>
+
+{% if demos %}
+<section class="section">
+  <h2>Upcoming free demo classes</h2>
+  <div class="demo-list">{% for d in demos %}{{ demo_card(d) }}{% endfor %}</div>
+</section>
+{% endif %}
+
+{% if promos %}
+<section class="section">
+  <h2>What's new</h2>
+  <div class="promo-strip">{% for p in promos %}{{ promo_card(p) }}{% endfor %}</div>
+</section>
+{% endif %}
+
+<section class="section">
+  <h2>Our classes</h2>
+  <div class="class-grid">
+    {% for c in classes %}
+      <article class="class-card" style="--c: {{ c.color }}">
+        {% if c.image %}<img src="{{ media_url(c.image) }}" alt="{{ c.name }}" loading="lazy">{% endif %}
+        <div class="class-body">
+          <h3>{{ c.name }}</h3>
+          <p>{{ c.description }}</p>
+          <ul class="sched">{% for b in batches[c.id] %}<li>{{ b.days | days }} · {{ b.start_time | t12 }}–{{ b.end_time | t12 }}</li>{% endfor %}</ul>
+          {% if c.fee %}<p class="fee">{{ c.fee | money }} / month</p>{% endif %}
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+
+{{ map_block() }}
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf with context %}
+{% block content %}
+<section class="card stack pay">
+  <header>
+    <p class="muted">{{ p.cname }} · {{ p.period | period }}</p>
+    <h1 class="amount">{{ p.amount | money }}</h1>
+  </header>
+
+  {% if p.status == 'pending' %}
+    <div class="pay-buttons">
+      <a class="btn btn-lg phonepe" href="{{ upi.phonepe }}">Pay with PhonePe</a>
+      <a class="btn btn-lg gpay" href="{{ upi.gpay }}">Pay with Google Pay</a>
+      <a class="btn btn-ghost" href="{{ upi.generic }}">Other UPI app</a>
+    </div>
+    <div class="upi-box">
+      <div id="qr" data-upi="{{ upi.generic }}"></div>
+      <div>
+        <p class="muted tiny">On a computer? Scan with any UPI app, or pay to</p>
+        <p class="upi-id"><b>{{ setting('upi_id') }}</b> <button type="button" class="linkbtn" data-copy="{{ setting('upi_id') }}">Copy</button></p>
+      </div>
+    </div>
+
+    <form method="post" class="stack">
+      {{ csrf() }}
+      <h2>Already paid?</h2>
+      <div class="seg">
+        <label><input type="radio" name="method" value="PhonePe" checked><span>PhonePe</span></label>
+        <label><input type="radio" name="method" value="Google Pay"><span>Google Pay</span></label>
+        <label><input type="radio" name="method" value="UPI"><span>Other UPI</span></label>
+        <label><input type="radio" name="method" value="Cash"><span>Cash</span></label>
+      </div>
+      <input name="reference" placeholder="UPI transaction ID (optional)">
+      <button class="btn btn-block">I've paid</button>
+    </form>
+    <p class="tiny muted">Payments go straight to the studio's UPI account. An admin confirms each payment and you'll get a WhatsApp receipt.</p>
+  {% else %}
+    <p>Thanks! Your payment is waiting for confirmation from the studio.</p>
+  {% endif %}
+  <a href="{{ url_for('home') }}">← Back home</a>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  (function () {
+    var el = document.getElementById('qr');
+    if (el && window.QRCode) new QRCode(el, { text: el.dataset.upi, width: 132, height: 132 });
+  })();
+</script>
+{% endblock %}

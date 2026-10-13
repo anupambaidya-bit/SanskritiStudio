@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf with context %}
+{% block title %}Classes · Sanskriti Admin{% endblock %}
+{% macro day_picker(selected='') %}
+  {% set sel = selected.split(',') %}
+  <div class="daypick">{% for dn in DAYS %}<label><input type="checkbox" name="days" value="{{ loop.index0 }}" {{ 'checked' if (loop.index0 | string) in sel }}><span>{{ dn[:2] }}</span></label>{% endfor %}</div>
+{% endmacro %}
+{% block content %}
+<header class="page-head row">
+  <h1>Classes & schedules</h1>
+  <a class="btn btn-sm" href="#new-class">+ New class</a>
+</header>
+
+{% for c in classes %}
+<section class="card class-admin {{ 'inactive' if not c.active }}" id="class-{{ c.id }}" style="--c: {{ c.color }}">
+  <div class="class-admin-head">
+    {% if c.image %}<img src="{{ media_url(c.image) }}" alt="">{% endif %}
+    <div>
+      <h2>{{ c.name }} {% if not c.active %}<span class="pill">Hidden</span>{% endif %}</h2>
+      <p class="muted">{{ c.fee | money }}/month · {{ c.students }} student{{ 's' if c.students != 1 }}</p>
+    </div>
+    <form method="post" action="{{ url_for('admin_class_toggle', cid=c.id) }}" class="inline right">{{ csrf() }}
+      <button class="btn btn-ghost btn-sm">{{ 'Hide from students' if c.active else 'Show to students' }}</button>
+    </form>
+  </div>
+
+  <h3>Weekly schedule</h3>
+  {% for b in batches[c.id] %}
+    <form method="post" action="{{ url_for('admin_batch_update', bid=b.id) }}" class="batch-row">{{ csrf() }}
+      {{ day_picker(b.days) }}
+      <input type="time" name="start_time" value="{{ b.start_time }}" aria-label="Start">
+      <span>to</span>
+      <input type="time" name="end_time" value="{{ b.end_time }}" aria-label="End">
+      <input name="teacher" value="{{ b.teacher or '' }}" placeholder="Teacher (optional)" class="teacher">
+      <button class="btn btn-sm btn-ghost">Save</button>
+      <button class="btn btn-sm btn-ghost danger" name="delete" value="1" data-confirm-click="Remove this schedule?">Remove</button>
+    </form>
+  {% else %}<p class="empty">No schedule yet.</p>{% endfor %}
+  <form method="post" action="{{ url_for('admin_batch_add', cid=c.id) }}" class="batch-row add">{{ csrf() }}
+    {{ day_picker() }}
+    <input type="time" name="start_time" required aria-label="Start"><span>to</span><input type="time" name="end_time" required aria-label="End">
+    <input name="teacher" placeholder="Teacher (optional)" class="teacher">
+    <button class="btn btn-sm">+ Add timing</button>
+  </form>
+
+  <h3>Demo classes</h3>
+  {% for d in demos[c.id] %}
+    <div class="row-line">
+      <span>{{ d.date | nicedate }} · {{ d.start_time | t12 }}{% if d.end_time %}–{{ d.end_time | t12 }}{% endif %} · {{ d.booked }} booked</span>
+      <form method="post" action="{{ url_for('admin_demo_delete', did=d.id) }}" class="inline" data-confirm="Cancel this demo?">{{ csrf() }}<button class="linkbtn danger">Cancel</button></form>
+    </div>
+  {% else %}<p class="empty">No upcoming demos.</p>{% endfor %}
+  <form method="post" action="{{ url_for('admin_demo_add', cid=c.id) }}" class="batch-row add">{{ csrf() }}
+    <input type="date" name="date" required min="{{ today }}" aria-label="Date">
+    <input type="time" name="start_time" required aria-label="Start"><span>to</span><input type="time" name="end_time" aria-label="End">
+    <input name="location" placeholder="{{ setting('address') }}" class="teacher" aria-label="Location">
+    <label class="check"><input type="checkbox" name="notify" value="1" checked> WhatsApp interested students</label>
+    <button class="btn btn-sm">+ Add demo</button>
+  </form>
+
+  <details class="edit">
+    <summary>Edit details</summary>
+    <form method="post" action="{{ url_for('admin_class_update', cid=c.id) }}" enctype="multipart/form-data" class="stack">{{ csrf() }}
+      <div class="grid3">
+        <label class="field"><span>Name</span><input name="name" value="{{ c.name }}" required></label>
+        <label class="field"><span>Monthly fee (₹)</span><input name="fee" type="number" min="0" value="{{ c.fee }}"></label>
+        <label class="field"><span>Colour</span><input name="color" type="color" value="{{ c.color }}"></label>
+      </div>
+      <label class="field"><span>Description</span><textarea name="description" rows="2">{{ c.description or '' }}</textarea></label>
+      <label class="field"><span>Photo</span><input type="file" name="image" accept="image/*"></label>
+      <button class="btn btn-sm">Save details</button>
+    </form>
+  </details>
+</section>
+{% endfor %}
+
+<section class="card" id="new-class">
+  <h2>Add a new class</h2>
+  <form method="post" enctype="multipart/form-data" class="stack">{{ csrf() }}
+    <div class="grid3">
+      <label class="field"><span>Class name</span><input name="name" required placeholder="e.g. Kathak"></label>
+      <label class="field"><span>Monthly fee (₹)</span><input name="fee" type="number" min="0" placeholder="2000"></label>
+      <label class="field"><span>Colour on calendar</span><input name="color" type="color" value="#b5651d"></label>
+    </div>
+    <label class="field"><span>Description</span><textarea name="description" rows="2" placeholder="What students will learn"></textarea></label>
+    <label class="field"><span>Photo</span><input type="file" name="image" accept="image/*"></label>
+    <div class="field"><span>First timing (optional)</span>
+      <div class="batch-row">{{ day_picker() }}<input type="time" name="start_time" aria-label="Start"><span>to</span><input type="time" name="end_time" aria-label="End"><input name="teacher" placeholder="Teacher" class="teacher"></div>
+    </div>
+    <button class="btn">Add class</button>
+  </form>
+</section>
+{% endblock %}

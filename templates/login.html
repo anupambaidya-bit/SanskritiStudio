@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf with context %}
+{% block title %}Log in · Sanskriti{% endblock %}
+{% block content %}
+<section class="auth card">
+  <div class="tabs">
+    <a href="{{ url_for('login') }}" class="{{ 'active' if mode != 'admin' }}">Student / Parent</a>
+    <a href="{{ url_for('login', **{'as': 'admin'}) }}" class="{{ 'active' if mode == 'admin' }}">Admin</a>
+  </div>
+
+  {% if step == 'phone' %}
+    <h1>{{ 'Admin login' if mode == 'admin' else 'Log in or sign up' }}</h1>
+    <p class="muted">Enter your WhatsApp number. We'll send you a 6-digit code there.</p>
+    <form method="post" class="stack">
+      {{ csrf() }}
+      <input type="hidden" name="as" value="{{ mode }}"><input type="hidden" name="next" value="{{ next }}">
+      <label class="field">
+        <span>WhatsApp number</span>
+        <div class="phone-input"><span>+91</span><input type="tel" name="phone" inputmode="tel" autocomplete="tel" placeholder="98765 43210" required autofocus value="{{ phone[2:] if phone }}"></div>
+      </label>
+      <button class="btn btn-lg btn-block wa">Send code on WhatsApp</button>
+    </form>
+  {% else %}
+    <h1>Enter your code</h1>
+    <p class="muted">Sent on WhatsApp to <b>{{ phone | phone }}</b>.</p>
+    <form method="post" class="stack">
+      {{ csrf() }}
+      <input type="hidden" name="as" value="{{ mode }}"><input type="hidden" name="next" value="{{ next }}">
+      <input type="hidden" name="phone" value="{{ phone }}">
+      <input class="otp" type="text" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" placeholder="••••••" required autofocus>
+      <button class="btn btn-lg btn-block">Continue</button>
+    </form>
+    <p class="center"><a href="{{ url_for('login', **{'as': mode}) }}">Use a different number</a></p>
+  {% endif %}
+  <p class="tiny muted center">You'll stay logged in on this device.</p>
+</section>
+{% endblock %}

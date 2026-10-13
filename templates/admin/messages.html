@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Messages · Sanskriti Admin{% endblock %}
+{% block content %}
+<header class="page-head">
+  <h1>WhatsApp messages</h1>
+  {% if provider_name == 'console' %}
+    <div class="flash flash-info">WhatsApp isn't connected yet, so these messages are logged here instead of being sent. See README → "Connecting WhatsApp".</div>
+  {% else %}
+    <p class="muted">Sending through <b>{{ provider_name }}</b>. Last 300 messages.</p>
+  {% endif %}
+</header>
+<div class="table-wrap card">
+<table class="table">
+  <thead><tr><th>When</th><th>To</th><th>Type</th><th>Message</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for m in msgs %}
+    <tr>
+      <td class="nowrap">{{ m.created_at[5:16] }}</td>
+      <td class="nowrap">{{ m.to_phone | phone }}</td>
+      <td><span class="tag">{{ m.kind | replace('_', ' ') }}</span></td>
+      <td class="msg">{{ m.body if m.kind != 'otp' else m.body[:24] ~ '••••••' }}</td>
+      <td>{% if m.status == 'sent' %}<span class="pill pill-ok">{{ 'logged' if m.provider == 'console' else 'sent' }}</span>{% else %}<span class="pill pill-warn" title="{{ m.error }}">failed</span>{% endif %}</td>
+    </tr>
+  {% else %}<tr><td colspan="5" class="empty">No messages yet.</td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}
