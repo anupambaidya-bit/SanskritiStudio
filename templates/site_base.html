@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2a0c16">
+  <script>document.documentElement.classList.add('js')</script>
+  <title>{% block title %}{{ setting('studio_name') }} · Bharatanatyam & Odissi in Electronic City{% endblock %}</title>
+  <meta name="description" content="{{ setting('hero_text') }}">
+  <meta property="og:title" content="{{ setting('studio_name') }} · {{ setting('tagline') }}">
+  <meta property="og:description" content="{{ setting('hero_text') }}">
+  <meta property="og:image" content="{{ media_url('seed-hero-reel.jpg') }}">
+  <link rel="icon" href="{{ media_url(setting('logo')) }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Tiro+Devanagari+Sanskrit&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
+</head>
+<body class="site {% block body_class %}{% endblock %}" style="--cream: {{ setting('bg_color') or '#f6efe4' }}">
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="s-head" data-head>
+  <div class="s-head-in">
+    <a class="s-brand" href="{{ url_for('index') }}" aria-label="{{ setting('studio_name') }} home">
+      <img src="{{ media_url(setting('logo')) }}" alt="" width="44" height="44">
+      <span><b>Sanskriti</b><small>Studio · Electronic City</small></span>
+    </a>
+    <nav class="s-nav" id="s-nav" aria-label="Main">
+      <a href="{{ url_for('index') }}#classes">Classes</a>
+      <a href="{{ url_for('index') }}#moments">Moments</a>
+      <a href="{{ url_for('index') }}#meaning">Our story</a>
+      <a href="{{ url_for('index') }}#faq">FAQ</a>
+      <a href="{{ url_for('index') }}#visit">Visit</a>
+      {% if g.user %}
+        <a href="{{ url_for('admin_home' if g.user.role == 'admin' else 'home') }}" class="s-nav-cta">My Sanskriti</a>
+      {% else %}
+        <a href="{{ url_for('login') }}" class="s-nav-login">Log in</a>
+        <a href="{{ url_for('login', next='/home') }}" class="s-btn s-btn-gold s-nav-cta">Book a free demo</a>
+      {% endif %}
+    </nav>
+    <button class="s-burger" type="button" aria-controls="s-nav" aria-expanded="false" data-burger><span></span><span></span><span></span><b class="sr">Menu</b></button>
+  </div>
+</header>
+
+<main id="main">
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% if msgs %}<div class="flashes s-flashes">{% for cat, m in msgs %}<div class="flash flash-{{ cat }}">{{ m }}</div>{% endfor %}</div>{% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="s-foot">
+  <div class="s-foot-in">
+    <div class="s-foot-brand">
+      <img src="{{ media_url(setting('logo')) }}" alt="Sanskriti logo" width="72" height="72" loading="lazy">
+      <p class="s-tagline">{{ setting('tagline') }}</p>
+      <p>{{ setting('address') }}</p>
+    </div>
+    <div>
+      <h4>Explore</h4>
+      <a href="{{ url_for('index') }}#classes">Classes</a>
+      <a href="{{ url_for('index') }}#moments">Moments</a>
+      <a href="{{ url_for('index') }}#faq">FAQ</a>
+      <a href="{{ url_for('login') }}">Student login</a>
+      <a href="{{ url_for('login', **{'as': 'admin'}) }}">Admin login</a>
+    </div>
+    <div>
+      <h4>Call or WhatsApp</h4>
+      {% for digits, label in setting('contact_phones') | phone_list %}
+        <a href="https://wa.me/{{ digits }}" target="_blank" rel="noopener">{{ label }}</a>
+      {% endfor %}
+      {% if setting('instagram_url') %}<a href="{{ setting('instagram_url') }}" target="_blank" rel="noopener">Instagram ↗</a>{% endif %}
+      <a href="{{ maps_link }}" target="_blank" rel="noopener">Directions ↗</a>
+    </div>
+  </div>
+  <p class="s-copy">© {{ today[:4] }} {{ setting('studio_name') }}</p>
+</footer>
+
+{% if setting('music_on') == '1' and setting('music') %}
+<audio id="bgm" src="{{ media_url(setting('music')) }}" loop preload="auto"></audio>
+<button type="button" id="bgm-toggle" class="bgm-toggle s-bgm" aria-pressed="false" title="Music on / off">
+  <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="bgm-label">Music</span>
+</button>
+{% endif %}
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+<script src="{{ url_for('static', filename='site.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

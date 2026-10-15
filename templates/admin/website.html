@@ -12,16 +12,16 @@
   <section class="card stack" id="logo">
     <h2>Logo</h2>
     <div class="logo-preview">
-      {% if setting('logo') %}<img src="{{ media_url(setting('logo')) }}" alt="Current logo">{% else %}<span class="brand-mark big">स</span><span class="muted tiny">No logo uploaded yet. The स mark is shown instead.</span>{% endif %}
+      <img src="{{ media_url(setting('logo')) }}" alt="Current logo">
     </div>
     <form method="post" enctype="multipart/form-data" class="row-form">{{ csrf() }}
       <input type="hidden" name="action" value="logo"><input type="hidden" name="anchor" value="#logo">
       <input type="file" name="file" accept="image/*" required>
       <button class="btn btn-sm">Upload logo</button>
     </form>
-    {% if setting('logo') %}
+    {% if setting('logo') != 'seed-logo.png' %}
     <form method="post">{{ csrf() }}<input type="hidden" name="action" value="logo_remove"><input type="hidden" name="anchor" value="#logo">
-      <button class="linkbtn danger">Remove logo</button></form>
+      <button class="linkbtn">Use the original Sanskriti logo</button></form>
     {% endif %}
     <p class="tiny muted">A square PNG with a transparent background looks best.</p>
   </section>
@@ -52,10 +52,25 @@
 </div>
 
 <section class="card stack" id="look">
-  <h2>Colours and "What Sanskriti means"</h2>
+  <h2>Homepage words</h2>
   <form method="post" class="stack">{{ csrf() }}
     <input type="hidden" name="action" value="look"><input type="hidden" name="anchor" value="#look">
-    <div class="field"><span>Background colour</span>
+    <div class="grid2">
+      <label class="field"><span>Small line above the title</span><input name="hero_eyebrow" value="{{ setting('hero_eyebrow') }}"></label>
+      <label class="field"><span>Tagline</span><input name="tagline" value="{{ setting('tagline') }}"></label>
+    </div>
+    <label class="field"><span>Big title</span><input name="hero_title" value="{{ setting('hero_title') }}"></label>
+    <label class="field"><span>Text under the title</span><textarea name="hero_text" rows="2">{{ setting('hero_text') }}</textarea></label>
+    <div class="grid2">
+      <label class="field"><span>Phone / WhatsApp numbers shown on the site (comma separated)</span><input name="contact_phones" value="{{ setting('contact_phones') }}"></label>
+      <label class="field"><span>Instagram link (optional)</span><input name="instagram_url" value="{{ setting('instagram_url') }}" placeholder="https://instagram.com/..."></label>
+    </div>
+    <label class="field"><span>"What Sanskriti means" heading</span><input name="about_title" value="{{ setting('about_title') }}"></label>
+    <label class="field"><span>"What Sanskriti means" text (each new line starts a paragraph; leave it empty to hide the section)</span>
+      <textarea name="about_text" rows="6">{{ setting('about_text') }}</textarea></label>
+    <label class="field"><span>FAQ (a line starting "Q:" is a question, the line after starting "A:" is its answer)</span>
+      <textarea name="faq" rows="10">{{ setting('faq') }}</textarea></label>
+    <div class="field"><span>Colour of the light sections</span>
       <div class="swatches">
         {% for hex, name in presets %}
         <label class="swatch" title="{{ name }}"><input type="radio" name="bg_color" value="{{ hex }}" {{ 'checked' if setting('bg_color') == hex }}>
@@ -65,12 +80,29 @@
           <input type="color" id="bg-custom" value="{{ setting('bg_color') }}" aria-label="Custom colour"><small>Custom</small></label>
       </div>
     </div>
-    <label class="field"><span>Heading</span><input name="about_title" value="{{ setting('about_title') }}"></label>
-    <label class="field"><span>Text (each new line starts a paragraph; leave it empty to hide the section)</span>
-      <textarea name="about_text" rows="7">{{ setting('about_text') }}</textarea></label>
     <button class="btn">Save</button>
   </form>
 </section>
+
+<div class="grid2">
+  {% for key, title, help in [('hero_video', 'Hero video', 'Plays in the arch at the top of the homepage. A portrait (phone) video of 15–30 seconds works best.'),
+                              ('feature_video', 'Admissions video', 'Plays in the phone frame in the "Admissions open" section.')] %}
+  <section class="card stack" id="{{ key }}">
+    <h2>{{ title }}</h2>
+    {% if setting(key) %}<video src="{{ media_url(setting(key)) }}" muted controls preload="metadata" style="max-height: 260px; border-radius: 12px; background: #000"></video>{% endif %}
+    <p class="tiny muted">{{ help }} Keep it under 20 MB so phones load it quickly.</p>
+    <form method="post" enctype="multipart/form-data" class="row-form">{{ csrf() }}
+      <input type="hidden" name="action" value="{{ key }}"><input type="hidden" name="anchor" value="#{{ key }}">
+      <input type="file" name="file" accept="video/*" required>
+      <button class="btn btn-sm">Upload video</button>
+    </form>
+    {% if setting(key).startswith('seed-') == false %}
+    <form method="post">{{ csrf() }}<input type="hidden" name="action" value="{{ key }}_default"><input type="hidden" name="anchor" value="#{{ key }}">
+      <button class="linkbtn">Use the original video</button></form>
+    {% endif %}
+  </section>
+  {% endfor %}
+</div>
 
 <section class="card stack" id="carousel">
   <h2>Homepage carousel</h2>

@@ -1,84 +1,286 @@
-{% extends 'base.html' %}
-{% from '_macros.html' import promo_card, demo_card, map_block with context %}
+{% extends 'site_base.html' %}
+{% block body_class %}home{% endblock %}
 {% block content %}
-<section class="hero carousel" data-carousel aria-roledescription="carousel" aria-label="Sanskriti classes">
-  {% if slides %}
-  <div class="slides">
-    {% for sl in slides %}
-    <figure class="slide{{ ' active' if loop.first }}" aria-roledescription="slide" aria-label="{{ loop.index }} of {{ slides|length }}">
-      {% if sl.media_type == 'video' %}
-        <video src="{{ media_url(sl.media) }}" muted loop playsinline preload="metadata" {{ 'autoplay' if loop.first }}></video>
+
+{# ---------- welcome curtain: a tap here also lets the browser start the music ---------- #}
+<div class="curtain" data-curtain hidden>
+  <div class="curtain-glow"></div>
+  <div class="curtain-in">
+    <img class="curtain-logo" src="{{ media_url(setting('logo')) }}" alt="Sanskriti" width="150" height="150">
+    <p class="curtain-word" lang="sa">संस्कृति</p>
+    <p class="curtain-tag">{{ setting('tagline') }}</p>
+    <div class="curtain-actions">
+      {% if setting('music_on') == '1' and setting('music') %}
+        <button type="button" class="s-btn s-btn-gold" data-enter="music">♪ Enter with music</button>
+        <button type="button" class="s-btn s-btn-ghost" data-enter="quiet">Enter quietly</button>
       {% else %}
-        <div class="slide-bg" style="background-image: url('{{ media_url(sl.media) }}')"></div>
-        <img src="{{ media_url(sl.media) }}" alt="{{ sl.caption or sl.class_name or 'Sanskriti dancers' }}" {{ 'loading=lazy' if not loop.first }}>
+        <button type="button" class="s-btn s-btn-gold" data-enter="quiet">Enter</button>
       {% endif %}
-      {% if sl.caption or sl.class_name %}
-      <figcaption class="slide-cap">
-        {% if sl.class_name %}<b>{{ sl.class_name }}</b>{% endif %}
-        {% if sl.caption and sl.caption != sl.class_name %}<span>{{ sl.caption }}</span>{% endif %}
-      </figcaption>
-      {% endif %}
-    </figure>
-    {% endfor %}
-  </div>
-  {% else %}
-  <img src="{{ media_url('seed-hero.jpg') }}" alt="Sanskriti students in performance costume">
-  {% endif %}
-  <div class="hero-text">
-    <h1>Classical dance at {{ setting('studio_name') }}</h1>
-    <p>Odissi, Bharatanatyam and more at Ragam Gardens. Join with your WhatsApp number and book a free demo in a minute.</p>
-    <div class="hero-actions">
-      <a class="btn btn-lg" href="{{ url_for('login') }}">Join with WhatsApp</a>
-      <a class="btn btn-ghost btn-lg light" href="{{ url_for('login', **{'as': 'admin'}) }}">Admin login</a>
     </div>
   </div>
-  {% if slides|length > 1 %}
-  <button type="button" class="car-btn car-prev" data-prev aria-label="Previous photo">‹</button>
-  <button type="button" class="car-btn car-next" data-next aria-label="Next photo">›</button>
-  <div class="car-dots">{% for sl in slides %}<button type="button" data-go="{{ loop.index0 }}" class="{{ 'active' if loop.first }}" aria-label="Show photo {{ loop.index }}"></button>{% endfor %}</div>
-  {% endif %}
+</div>
+
+{# ---------- hero ---------- #}
+<section class="s-hero" id="top">
+  <div class="s-hero-bg" aria-hidden="true">
+    {% if setting('hero_video') %}
+      <video src="{{ media_url(setting('hero_video')) }}" poster="{{ media_url('seed-hero-reel.jpg') if setting('hero_video') == 'seed-hero-reel.mp4' }}" muted loop playsinline autoplay preload="auto"></video>
+    {% else %}
+      <img src="{{ media_url('seed-hero.jpg') }}" alt="">
+    {% endif %}
+  </div>
+  <div class="s-hero-shade" aria-hidden="true"></div>
+  <div class="sparkles" aria-hidden="true">{% for i in range(18) %}<i style="--x: {{ (i * 53) % 100 }}%; --d: {{ (i * 7) % 11 }}s; --s: {{ 3 + (i % 4) }}px"></i>{% endfor %}</div>
+  <div class="s-hero-in">
+    <div class="s-hero-copy">
+      <p class="eyebrow reveal">{{ setting('hero_eyebrow') }}</p>
+      <h1 class="reveal" style="--delay: .1s">{{ setting('hero_title') }}</h1>
+      <p class="s-lead reveal" style="--delay: .2s">{{ setting('hero_text') }}</p>
+      <div class="s-actions reveal" style="--delay: .3s">
+        <a class="s-btn s-btn-gold s-btn-lg" href="{{ url_for('login', next='/home') }}">Book a free demo</a>
+        <a class="s-btn s-btn-ghost s-btn-lg" href="#classes">Explore classes</a>
+      </div>
+      <p class="s-tagline reveal" style="--delay: .4s">{{ setting('tagline') }}</p>
+    </div>
+    {% if setting('hero_video') %}
+    <div class="arch reveal" style="--delay: .25s" data-tilt>
+      <video src="{{ media_url(setting('hero_video')) }}" poster="{{ media_url('seed-hero-reel.jpg') if setting('hero_video') == 'seed-hero-reel.mp4' }}" muted loop playsinline autoplay preload="auto" aria-label="Sanskriti students performing"></video>
+      <span class="arch-badge">Live on stage</span>
+    </div>
+    {% endif %}
+  </div>
+  <a class="scroll-cue" href="#who" aria-label="Scroll down"><span></span>Scroll</a>
 </section>
 
+{# ---------- ribbon ---------- #}
+<div class="ribbon" aria-hidden="true">
+  <div class="ribbon-track">
+    {% for _ in range(2) %}<span>Grace</span><b>✦</b><span>Rhythm</span><b>✦</b><span>Tradition</span><b>✦</b><span>Adavu</span><b>✦</b><span>Mudra</span><b>✦</b><span>Abhinaya</span><b>✦</b><span>Tala</span><b>✦</b><span>Bhava</span><b>✦</b><span>Raga</span><b>✦</b>{% endfor %}
+  </div>
+</div>
+
+{# ---------- who we are ---------- #}
+<section class="s-sec cream" id="who">
+  <div class="s-wrap">
+    <p class="eyebrow dark reveal">Who we are</p>
+    <h2 class="s-h2 reveal">A home for Indian classical dance</h2>
+    <p class="s-intro reveal">Sanskriti Studio teaches Bharatanatyam and Odissi to children and adults in Electronic City. Small batches, patient gurus and real stage experience.</p>
+    <div class="pillars">
+      {% set pillars = [
+        ('Discover', 'Start with a free demo class. No experience needed.', '<path d="M12 3l2.6 5.6L20 9.3l-4 4 1 5.7L12 16.3 7 19l1-5.7-4-4 5.4-.7z"/>'),
+        ('Learn', 'Weekly classes in adavus, mudras, rhythm and expression.', '<path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="16" r="3"/>'),
+        ('Perform', 'Festivals and stage shows through the year.', '<path d="M3 20h18M6 20V9l6-5 6 5v11M10 20v-5h4v5"/>'),
+        ('Grow', 'Grace, focus and confidence that last a lifetime.', '<path d="M12 21V10M12 10c0-4 3-6 7-6 0 4-3 6-7 6zM12 13c0-3-2.5-5-6-5 0 3 2.5 5 6 5z"/>'),
+        ('Connect', 'A warm community of families who love the arts.', '<circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M3 19c.5-3 2.5-5 5-5s4.5 2 5 5M11 19c.5-3 2.5-5 5-5s4.5 2 5 5"/>'),
+      ] %}
+      {% for name, text, icon in pillars %}
+      <article class="pillar reveal" style="--delay: {{ loop.index0 * 0.08 }}s">
+        <svg viewBox="0 0 24 24" aria-hidden="true">{{ icon | safe }}</svg>
+        <h3>{{ name }}</h3>
+        <p>{{ text }}</p>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{# ---------- meaning ---------- #}
 {% if setting('about_text') %}
-<section class="section about card">
-  <div class="about-word" aria-hidden="true">संस्कृति</div>
-  <div>
-    <h2>{{ setting('about_title') }}</h2>
-    {% for para in setting('about_text').split('\n') if para.strip() %}<p>{{ para }}</p>{% endfor %}
+<section class="s-sec maroon meaning" id="meaning">
+  <div class="mandala" aria-hidden="true" data-parallax="-.15"></div>
+  <div class="s-wrap meaning-in">
+    <p class="meaning-word reveal" lang="sa" data-parallax=".08">संस्कृति</p>
+    <div class="reveal" style="--delay: .15s">
+      <p class="eyebrow">Our story</p>
+      <h2 class="s-h2 light">{{ setting('about_title') }}</h2>
+      {% for para in setting('about_text').split('\n') if para.strip() %}<p class="s-body">{{ para }}</p>{% endfor %}
+    </div>
   </div>
 </section>
 {% endif %}
 
-{% if demos %}
-<section class="section">
-  <h2>Upcoming free demo classes</h2>
-  <div class="demo-list">{% for d in demos %}{{ demo_card(d) }}{% endfor %}</div>
-</section>
-{% endif %}
-
-{% if promos %}
-<section class="section">
-  <h2>What's new</h2>
-  <div class="promo-strip">{% for p in promos %}{{ promo_card(p) }}{% endfor %}</div>
-</section>
-{% endif %}
-
-<section class="section">
-  <h2>Our classes</h2>
-  <div class="class-grid">
+{# ---------- classes rail ---------- #}
+<section class="s-sec dark" id="classes">
+  <div class="s-wrap">
+    <div class="rail-head">
+      <div>
+        <p class="eyebrow reveal">Classes</p>
+        <h2 class="s-h2 light reveal">Choose your dance</h2>
+      </div>
+      <div class="rail-arrows"><button type="button" data-rail-prev="classes-rail" aria-label="Previous">‹</button><button type="button" data-rail-next="classes-rail" aria-label="Next">›</button></div>
+    </div>
+  </div>
+  <div class="rail" id="classes-rail">
     {% for c in classes %}
-      <article class="class-card" style="--c: {{ c.color }}">
-        {% if c.image %}<img src="{{ media_url(c.image) }}" alt="{{ c.name }}" loading="lazy">{% endif %}
-        <div class="class-body">
-          <h3>{{ c.name }}</h3>
-          <p>{{ c.description }}</p>
-          <ul class="sched">{% for b in batches[c.id] %}<li>{{ b.days | days }} · {{ b.start_time | t12 }}–{{ b.end_time | t12 }}</li>{% endfor %}</ul>
-          {% if c.fee %}<p class="fee">{{ c.fee | money }} / month</p>{% endif %}
+    <article class="class-tile reveal" style="--c: {{ c.color }}; --delay: {{ loop.index0 * 0.08 }}s">
+      {% if c.image %}<img src="{{ media_url(c.image) }}" alt="{{ c.name }} students" loading="lazy">{% endif %}
+      <div class="class-tile-body">
+        <h3>{{ c.name }}</h3>
+        <p>{{ c.description }}</p>
+        <ul>{% for b in batches[c.id] %}<li>{{ b.days | days }} · {{ b.start_time | t12 }}</li>{% endfor %}</ul>
+        <div class="class-tile-foot">
+          {% if c.fee %}<span>{{ c.fee | money }}<small>/month</small></span>{% endif %}
+          <a class="s-btn s-btn-gold s-btn-sm" href="{{ url_for('login', next='/home') }}">Free demo</a>
         </div>
-      </article>
+      </div>
+    </article>
     {% endfor %}
   </div>
 </section>
 
-{{ map_block() }}
+{# ---------- demos ---------- #}
+{% if demos %}
+<section class="s-sec cream" id="demos">
+  <div class="s-wrap">
+    <p class="eyebrow dark reveal">Try a class</p>
+    <h2 class="s-h2 reveal">Upcoming free demo classes</h2>
+    <div class="demo-cards">
+      {% for d in demos %}
+      <article class="demo-card reveal" style="--c: {{ d.color }}; --delay: {{ loop.index0 * 0.08 }}s">
+        <div class="demo-cal"><b>{{ d.date[8:10] }}</b><span>{{ (d.date | nicedate)[:3] }}</span></div>
+        <div>
+          <h3>{{ d.cname }}</h3>
+          <p>{{ d.date | nicedate }} · {{ d.start_time | t12 }}{% if d.end_time %} – {{ d.end_time | t12 }}{% endif %}</p>
+        </div>
+        <a class="s-btn s-btn-maroon s-btn-sm" href="{{ url_for('login', next='/home') }}">Book</a>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# ---------- moments ---------- #}
+{% if slides %}
+<section class="s-sec dark" id="moments">
+  <div class="s-wrap">
+    <div class="rail-head">
+      <div>
+        <p class="eyebrow reveal">Moments</p>
+        <h2 class="s-h2 light reveal">Life at Sanskriti</h2>
+      </div>
+      <div class="rail-arrows"><button type="button" data-rail-prev="moments-rail" aria-label="Previous">‹</button><button type="button" data-rail-next="moments-rail" aria-label="Next">›</button></div>
+    </div>
+  </div>
+  <div class="rail moments" id="moments-rail">
+    {% for sl in slides %}
+    <button type="button" class="moment reveal" style="--delay: {{ (loop.index0 % 4) * 0.08 }}s" data-lightbox="{{ media_url(sl.media) }}" data-kind="{{ sl.media_type }}" data-caption="{{ sl.caption or sl.class_name or '' }}">
+      {% if sl.media_type == 'video' %}
+        <video src="{{ media_url(sl.media) }}" muted loop playsinline preload="metadata" data-inview></video>
+      {% else %}
+        <img src="{{ media_url(sl.media) }}" alt="{{ sl.caption or sl.class_name or 'Sanskriti dancers' }}" loading="lazy">
+      {% endif %}
+      <span class="moment-cap">{% if sl.class_name %}<b>{{ sl.class_name }}</b>{% endif %}{{ sl.caption if sl.caption != sl.class_name }}</span>
+    </button>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{# ---------- admissions feature ---------- #}
+<section class="s-sec maroon feature" id="admissions">
+  <div class="s-wrap feature-in">
+    {% if setting('feature_video') %}
+    <div class="phone reveal">
+      <video src="{{ media_url(setting('feature_video')) }}" poster="{{ media_url('seed-admissions-reel.jpg') if setting('feature_video') == 'seed-admissions-reel.mp4' }}" muted loop playsinline preload="metadata" data-inview></video>
+    </div>
+    {% endif %}
+    <div class="reveal" style="--delay: .15s">
+      <p class="eyebrow">Admissions open</p>
+      <h2 class="s-h2 light">A beautiful foundation for your child</h2>
+      <p class="s-body">Professional training, culture and confidence. Batches for every age, from a child's first steps to stage-ready performers.</p>
+      <ul class="ticks">
+        <li>Bharatanatyam and Odissi with experienced gurus</li>
+        <li>Small batches on weekdays and weekends</li>
+        <li>Stage performances at festivals and events</li>
+        <li>Fees, reminders and schedules on WhatsApp</li>
+      </ul>
+      <div class="s-actions">
+        <a class="s-btn s-btn-gold" href="{{ url_for('login', next='/home') }}">Book a free demo</a>
+        {% for digits, label in (setting('contact_phones') | phone_list)[:1] %}
+          <a class="s-btn s-btn-ghost" href="https://wa.me/{{ digits }}?text={{ 'Hi Sanskriti Studio, I would like to know about dance classes.' | urlencode }}" target="_blank" rel="noopener">WhatsApp us</a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ---------- promotions ---------- #}
+{% if promos %}
+<section class="s-sec dark" id="news">
+  <div class="s-wrap">
+    <p class="eyebrow reveal">What's new</p>
+    <h2 class="s-h2 light reveal">From the studio</h2>
+  </div>
+  <div class="rail news">
+    {% for p in promos %}
+    <article class="news-card reveal" style="--delay: {{ loop.index0 * 0.08 }}s">
+      {% if p.media_type == 'video' %}<video src="{{ media_url(p.media) }}#t=0.5" muted loop playsinline preload="metadata" controls></video>
+      {% elif p.media %}<img src="{{ media_url(p.media) }}" alt="{{ p.title }}" loading="lazy">{% endif %}
+      <div>
+        {% if p.cname %}<span class="chip">{{ p.cname }}</span>{% endif %}
+        <h3>{{ p.title }}</h3>
+        {% if p.body %}<p>{{ p.body }}</p>{% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{# ---------- FAQ ---------- #}
+{% set faqs = setting('faq') | faq_items %}
+{% if faqs %}
+<section class="s-sec cream" id="faq">
+  <div class="s-wrap narrow">
+    <p class="eyebrow dark reveal">Questions</p>
+    <h2 class="s-h2 reveal">Frequently asked questions</h2>
+    <div class="faq">
+      {% for q, a in faqs %}
+      <details class="reveal" style="--delay: {{ loop.index0 * 0.05 }}s" {{ 'open' if loop.first }}>
+        <summary>{{ q }}</summary>
+        <p>{{ a }}</p>
+      </details>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# ---------- closing band ---------- #}
+<section class="s-sec closing">
+  {% if setting('hero_video') %}<video class="closing-bg" src="{{ media_url(setting('hero_video')) }}" muted loop playsinline preload="none" data-inview aria-hidden="true"></video>{% endif %}
+  <div class="s-wrap closing-in reveal">
+    <p class="eyebrow">Your first step</p>
+    <h2 class="s-h2 light big">India's heritage is waiting to dance with you</h2>
+    <div class="s-actions center">
+      <a class="s-btn s-btn-gold s-btn-lg" href="{{ url_for('login', next='/home') }}">Start with a free demo</a>
+      <a class="s-btn s-btn-ghost s-btn-lg" href="#visit">Visit the studio</a>
+    </div>
+  </div>
+</section>
+
+{# ---------- visit ---------- #}
+<section class="s-sec cream" id="visit">
+  <div class="s-wrap visit">
+    <div class="reveal">
+      <p class="eyebrow dark">Visit us</p>
+      <h2 class="s-h2">Sanskriti Studio</h2>
+      <p class="s-body dark">{{ setting('address') }}</p>
+      <div class="visit-phones">
+        {% for digits, label in setting('contact_phones') | phone_list %}
+          <a href="tel:+{{ digits }}">📞 {{ label }}</a>
+        {% endfor %}
+      </div>
+      <a class="s-btn s-btn-maroon" href="{{ maps_link }}" target="_blank" rel="noopener">Get directions ↗</a>
+    </div>
+    <iframe class="visit-map reveal" src="{{ maps_embed }}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Map to {{ setting('studio_name') }}"></iframe>
+  </div>
+</section>
+
+<dialog class="lightbox" data-lightbox-dialog aria-label="Photo viewer">
+  <button type="button" class="lb-close" data-lb-close aria-label="Close">×</button>
+  <div class="lb-media"></div>
+  <p class="lb-cap"></p>
+</dialog>
 {% endblock %}

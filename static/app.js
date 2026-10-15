@@ -114,7 +114,7 @@
       else { setBtn(true); fadeIn(); unlisten(); }
     }
     var evs = ['pointerdown', 'keydown', 'touchend'];
-    function onFirst(e) { if (e.target.closest && e.target.closest('#bgm-toggle')) return; start(); }
+    function onFirst(e) { if (e.target.closest && e.target.closest('#bgm-toggle, [data-enter]')) return; start(); }
     function unlisten() { evs.forEach(function (ev) { document.removeEventListener(ev, onFirst, true); }); }
     evs.forEach(function (ev) { document.addEventListener(ev, onFirst, true); });
     bgmBtn.addEventListener('click', function () {
@@ -122,6 +122,11 @@
       else { bgm.pause(); off = true; store.set('localStorage', 'bgm-off', '1'); setBtn(false); }
     });
     setBtn(false);
+    // Used by the homepage welcome screen ("Enter with music" / "Enter quietly").
+    window.sanskritiMusic = {
+      on: function () { off = false; store.set('localStorage', 'bgm-off', '0'); start(); },
+      off: function () { bgm.pause(); off = true; store.set('localStorage', 'bgm-off', '1'); setBtn(false); }
+    };
     start();
     function savePos() { if (!bgm.paused) store.set('sessionStorage', 'bgm-t', String(bgm.currentTime)); }
     setInterval(savePos, 1500);

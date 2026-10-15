@@ -72,29 +72,57 @@ STATUS_LABELS = {
 }
 DEFAULT_SETTINGS = {
     "studio_name": "Sanskriti Studio",
-    "address": "Sanskriti Studio, Ragam Gardens",
-    "maps_query": "Sanskriti Studio, Ragam Gardens",
+    "address": "Sanskriti Studio, Ragham Gardens, Vittasandra, Electronic City, Bangalore",
+    "maps_query": "Ragham Gardens, Vittasandra, Electronic City, Bangalore",
     "upi_id": "sanskriti@upi",
     "payee_name": "Sanskriti Studio",
     "admin_phones": "",
     "payment_due_day": "5",
     # website look (Admin → Website)
-    "logo": "",
+    "logo": "seed-logo.png",
     "music": "seed-music.mp3",
     "music_on": "1",
-    "bg_color": "#f6e7d2",
+    "bg_color": "#f6efe4",
+    "tagline": "Grace • Rhythm • Tradition",
+    "hero_eyebrow": "Admissions open · Bharatanatyam & Odissi",
+    "hero_title": "Culture in motion.",
+    "hero_text": ("Classical dance for children and adults at Ragham Gardens, Electronic City. "
+                  "Taught the traditional way, with patience, music and joy."),
+    "hero_video": "seed-hero-reel.mp4",
+    "feature_video": "seed-admissions-reel.mp4",
+    "contact_phones": "99720 97396, 70228 65885, 96065 87058",
+    "instagram_url": "",
     "about_title": "What does Sanskriti mean?",
     "about_text": (
         "Sanskriti (संस्कृति) is the Sanskrit word for culture. It comes from sam, \"together, completely\", "
         "and kṛ, \"to make\": something shaped with care until it is refined. That is how we see classical "
         "dance. Every adavu, mudra and abhinaya is practised patiently, passed from guru to student, until "
         "it becomes part of who you are.\n"
-        "At Sanskriti Studio in Ragam Gardens, children and adults learn Odissi and Bharatanatyam the "
-        "traditional way, in a warm space where rhythm, music and story come together."),
+        "At Sanskriti Studio, children and adults learn Bharatanatyam and Odissi the traditional way, in a "
+        "warm space where rhythm, music and story come together."),
+    "faq": (
+        "Q: What age can my child start?\n"
+        "A: Our Kids Classical Foundation batch welcomes children from 5 years. Older children and adults "
+        "join the regular Bharatanatyam and Odissi batches.\n"
+        "Q: Do I need any experience?\n"
+        "A: No. Every student starts with the basics: posture, rhythm, adavus and mudras. Experienced dancers "
+        "are placed in the right batch after the demo.\n"
+        "Q: How does the free demo class work?\n"
+        "A: Log in with your WhatsApp number, pick a demo date and come to the studio. After the class you "
+        "tell us which batch timing suits you.\n"
+        "Q: What should we wear to class?\n"
+        "A: Comfortable cotton clothes you can move in, such as a salwar or a practice saree. Practice is barefoot.\n"
+        "Q: How do fees and payments work?\n"
+        "A: Fees are monthly. You can pay by PhonePe or Google Pay from your Sanskriti page, and you get a "
+        "WhatsApp reminder if a payment is due.\n"
+        "Q: Do students perform on stage?\n"
+        "A: Yes. Students perform at festivals and cultural events through the year, when their teacher feels "
+        "they are ready."),
 }
-SITE_KEYS = ("bg_color", "about_title", "about_text", "music_on")
-BG_PRESETS = [("#f6e7d2", "Sandalwood"), ("#fbf6ee", "Ivory"), ("#fdecd9", "Saffron cream"),
-              ("#f3e6f5", "Lotus"), ("#e8f1ea", "Tulsi"), ("#efe7dc", "Temple stone")]
+SITE_TEXT_KEYS = ("tagline", "hero_eyebrow", "hero_title", "hero_text", "contact_phones", "instagram_url",
+                  "about_title", "about_text", "faq")
+BG_PRESETS = [("#f6efe4", "Cream"), ("#f6e7d2", "Sandalwood"), ("#fbf6ee", "Ivory"),
+              ("#fdecd9", "Saffron cream"), ("#f3e6f5", "Lotus"), ("#e8f1ea", "Tulsi")]
 
 
 # ---------------------------------------------------------------- helpers
@@ -239,6 +267,33 @@ def phone_fmt(p):
     if p and p.startswith("91") and len(p) == 12:
         return f"+91 {p[2:7]} {p[7:]}"
     return f"+{p}"
+
+
+@app.template_filter("phone_list")
+def phone_list(raw):
+    """'99720 97396, 70228 65885' -> [('919972097396', '+91 99720 97396'), ...] in the order given."""
+    out = []
+    for chunk in re.split(r"[,;/|\n]+", raw or ""):
+        p = normalize_phone(chunk)
+        if p and p not in [x[0] for x in out]:
+            out.append((p, phone_fmt(p)))
+    return out
+
+
+@app.template_filter("faq_items")
+def faq_items(raw):
+    """Lines starting 'Q:' and 'A:' -> [(question, answer), ...]."""
+    items, q = [], None
+    for line in (raw or "").splitlines():
+        line = line.strip()
+        if line[:2].upper() == "Q:":
+            q = line[2:].strip()
+            items.append([q, ""])
+        elif line[:2].upper() == "A:" and items:
+            items[-1][1] = (items[-1][1] + " " + line[2:].strip()).strip()
+        elif line and items:
+            items[-1][1] = (items[-1][1] + " " + line).strip()
+    return [tuple(i) for i in items if i[0]]
 
 
 @app.template_filter("money")
@@ -1247,17 +1302,27 @@ def admin_site():
             color = request.form.get("bg_color", "").strip()
             if re.fullmatch(r"#[0-9a-fA-F]{6}", color):
                 set_setting("bg_color", color.lower())
-            set_setting("about_title", request.form.get("about_title", "").strip())
-            set_setting("about_text", request.form.get("about_text", "").strip().replace("\r\n", "\n"))
+            for key in SITE_TEXT_KEYS:
+                if key in request.form:
+                    set_setting(key, request.form.get(key, "").strip().replace("\r\n", "\n"))
             flash("Saved. Open the homepage to see it.", "success")
         elif action == "logo":
             name, _ = save_upload(request.files.get("file"), kinds=("image",))
             if name:
                 set_setting("logo", name)
                 flash("Logo updated.", "success")
+        elif action in ("hero_video", "feature_video"):
+            name, _ = save_upload(request.files.get("file"), kinds=("video",))
+            if name:
+                set_setting(action, name)
+                flash("Video updated.", "success")
+        elif action in ("hero_video_default", "feature_video_default"):
+            key = action.replace("_default", "")
+            set_setting(key, DEFAULT_SETTINGS[key])
+            flash("Back to the original video.", "success")
         elif action == "logo_remove":
-            set_setting("logo", "")
-            flash("Logo removed.", "success")
+            set_setting("logo", DEFAULT_SETTINGS["logo"])
+            flash("Back to the original Sanskriti logo.", "success")
         elif action == "music":
             name, _ = save_upload(request.files.get("file"), kinds=("audio",))
             if name:
