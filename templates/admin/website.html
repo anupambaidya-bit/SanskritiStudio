@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf with context %}
+{% block title %}Website · Sanskriti Admin{% endblock %}
+{% block content %}
+<header class="page-head row">
+  <h1>Website</h1>
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('index') }}?preview=1" target="_blank" rel="noopener">Open homepage ↗</a>
+</header>
+<p class="muted">Change what visitors see on the homepage: logo, colours, music, photos and videos.</p>
+
+<div class="grid2">
+  <section class="card stack" id="logo">
+    <h2>Logo</h2>
+    <div class="logo-preview">
+      {% if setting('logo') %}<img src="{{ media_url(setting('logo')) }}" alt="Current logo">{% else %}<span class="brand-mark big">स</span><span class="muted tiny">No logo uploaded yet. The स mark is shown instead.</span>{% endif %}
+    </div>
+    <form method="post" enctype="multipart/form-data" class="row-form">{{ csrf() }}
+      <input type="hidden" name="action" value="logo"><input type="hidden" name="anchor" value="#logo">
+      <input type="file" name="file" accept="image/*" required>
+      <button class="btn btn-sm">Upload logo</button>
+    </form>
+    {% if setting('logo') %}
+    <form method="post">{{ csrf() }}<input type="hidden" name="action" value="logo_remove"><input type="hidden" name="anchor" value="#logo">
+      <button class="linkbtn danger">Remove logo</button></form>
+    {% endif %}
+    <p class="tiny muted">A square PNG with a transparent background looks best.</p>
+  </section>
+
+  <section class="card stack" id="music">
+    <h2>Background music</h2>
+    {% if setting('music') %}
+      <audio controls preload="none" src="{{ media_url(setting('music')) }}"></audio>
+      <p class="tiny muted">{{ 'Default soft Carnatic music (tanpura and flute).' if setting('music') == 'seed-music.mp3' else 'Your uploaded music.' }}
+        It plays softly on the public pages and loops. Visitors can switch it off with the ♪ button.
+        Browsers only allow sound after the visitor's first tap or click, so it starts then.</p>
+    {% endif %}
+    <form method="post" enctype="multipart/form-data" class="row-form">{{ csrf() }}
+      <input type="hidden" name="action" value="music"><input type="hidden" name="anchor" value="#music">
+      <input type="file" name="file" accept="audio/*" required>
+      <button class="btn btn-sm">Upload music</button>
+    </form>
+    <div class="row-form">
+      <form method="post">{{ csrf() }}<input type="hidden" name="action" value="music_toggle"><input type="hidden" name="anchor" value="#music">
+        <button class="btn btn-ghost btn-sm">{{ 'Turn music off' if setting('music_on') == '1' else 'Turn music on' }}</button></form>
+      {% if setting('music') != 'seed-music.mp3' %}
+      <form method="post">{{ csrf() }}<input type="hidden" name="action" value="music_default"><input type="hidden" name="anchor" value="#music">
+        <button class="linkbtn">Use the default music</button></form>
+      {% endif %}
+    </div>
+    <p class="tiny muted">Use MP3 or M4A, ideally under 5 MB so it loads quickly on phones. Only upload music you have the rights to use.</p>
+  </section>
+</div>
+
+<section class="card stack" id="look">
+  <h2>Colours and "What Sanskriti means"</h2>
+  <form method="post" class="stack">{{ csrf() }}
+    <input type="hidden" name="action" value="look"><input type="hidden" name="anchor" value="#look">
+    <div class="field"><span>Background colour</span>
+      <div class="swatches">
+        {% for hex, name in presets %}
+        <label class="swatch" title="{{ name }}"><input type="radio" name="bg_color" value="{{ hex }}" {{ 'checked' if setting('bg_color') == hex }}>
+          <span style="background: {{ hex }}"></span><small>{{ name }}</small></label>
+        {% endfor %}
+        <label class="swatch" title="Pick any colour"><input type="radio" name="bg_color" value="{{ setting('bg_color') }}" id="bg-custom-radio" {{ 'checked' if setting('bg_color') not in presets|map('first')|list }}>
+          <input type="color" id="bg-custom" value="{{ setting('bg_color') }}" aria-label="Custom colour"><small>Custom</small></label>
+      </div>
+    </div>
+    <label class="field"><span>Heading</span><input name="about_title" value="{{ setting('about_title') }}"></label>
+    <label class="field"><span>Text (each new line starts a paragraph; leave it empty to hide the section)</span>
+      <textarea name="about_text" rows="7">{{ setting('about_text') }}</textarea></label>
+    <button class="btn">Save</button>
+  </form>
+</section>
+
+<section class="card stack" id="carousel">
+  <h2>Homepage carousel</h2>
+  <p class="muted tiny">Photos and videos rotate at the top of the homepage. Link a slide to a class to show the class name on it. Any active class without a slide still appears, using its class photo.</p>
+  <form method="post" enctype="multipart/form-data" class="grid3 add-slide">{{ csrf() }}
+    <input type="hidden" name="action" value="slide_add"><input type="hidden" name="anchor" value="#carousel">
+    <label class="field"><span>Photo or video</span><input type="file" name="file" accept="image/*,video/*" required></label>
+    <label class="field"><span>Caption</span><input name="caption" placeholder="e.g. Grace in every tribhangi"></label>
+    <label class="field"><span>Class</span><select name="class_id"><option value="">None</option>{% for c in classes %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></label>
+    <button class="btn">Add slide</button>
+  </form>
+
+  <div class="slide-admin">
+    {% for sl in slides %}
+    <article class="slide-row {{ 'off' if not sl.active }}">
+      <div class="thumb">
+        {% if sl.media_type == 'video' %}<video src="{{ media_url(sl.media) }}" muted preload="metadata"></video>{% else %}<img src="{{ media_url(sl.media) }}" alt="" loading="lazy">{% endif %}
+        {% if not sl.active %}<span class="badge">Hidden</span>{% endif %}
+      </div>
+      <form method="post" class="slide-fields">{{ csrf() }}
+        <input type="hidden" name="slide_id" value="{{ sl.id }}"><input type="hidden" name="anchor" value="#carousel">
+        <input name="caption" value="{{ sl.caption or '' }}" placeholder="Caption" aria-label="Caption">
+        <select name="class_id" aria-label="Class"><option value="">No class</option>{% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if c.id == sl.class_id }}>{{ c.name }}</option>{% endfor %}</select>
+        <div class="slide-actions">
+          <button class="btn btn-sm" name="action" value="slide_save">Save</button>
+          <button class="btn btn-ghost btn-sm" name="action" value="slide_up" {{ 'disabled' if loop.first }} aria-label="Move up">↑</button>
+          <button class="btn btn-ghost btn-sm" name="action" value="slide_down" {{ 'disabled' if loop.last }} aria-label="Move down">↓</button>
+          <button class="btn btn-ghost btn-sm" name="action" value="slide_toggle">{{ 'Hide' if sl.active else 'Show' }}</button>
+          <button class="linkbtn danger" name="action" value="slide_delete" data-confirm-click="Remove this slide?">Remove</button>
+        </div>
+      </form>
+      <form method="post" enctype="multipart/form-data" class="row-form replace">{{ csrf() }}
+        <input type="hidden" name="slide_id" value="{{ sl.id }}"><input type="hidden" name="action" value="slide_replace"><input type="hidden" name="anchor" value="#carousel">
+        <input type="file" name="file" accept="image/*,video/*" required aria-label="Replace photo or video">
+        <button class="btn btn-ghost btn-sm">Replace</button>
+      </form>
+    </article>
+    {% else %}
+    <p class="empty">No slides yet. Add a photo or video above.</p>
+    {% endfor %}
+  </div>
+  <p class="tiny muted">Class photos (used on the class cards) are changed in <a href="{{ url_for('admin_classes') }}">Classes</a>. Promotion images and videos are in <a href="{{ url_for('admin_promotions') }}">Promotions</a>.</p>
+</section>
+{% endblock %}

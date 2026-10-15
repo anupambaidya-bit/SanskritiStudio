@@ -61,6 +61,7 @@ if PUBLIC_BASE_URL.startswith("https"):
 DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 IMAGE_EXT = {"jpg", "jpeg", "png", "gif", "webp"}
 VIDEO_EXT = {"mp4", "webm", "mov", "m4v"}
+AUDIO_EXT = {"mp3", "m4a", "aac", "ogg", "oga", "wav"}
 MINOR_AGE = 14
 STATUS_LABELS = {
     "interested": "Interested",
@@ -77,7 +78,23 @@ DEFAULT_SETTINGS = {
     "payee_name": "Sanskriti Studio",
     "admin_phones": "",
     "payment_due_day": "5",
+    # website look (Admin → Website)
+    "logo": "",
+    "music": "seed-music.mp3",
+    "music_on": "1",
+    "bg_color": "#f6e7d2",
+    "about_title": "What does Sanskriti mean?",
+    "about_text": (
+        "Sanskriti (संस्कृति) is the Sanskrit word for culture. It comes from sam, \"together, completely\", "
+        "and kṛ, \"to make\": something shaped with care until it is refined. That is how we see classical "
+        "dance. Every adavu, mudra and abhinaya is practised patiently, passed from guru to student, until "
+        "it becomes part of who you are.\n"
+        "At Sanskriti Studio in Ragam Gardens, children and adults learn Odissi and Bharatanatyam the "
+        "traditional way, in a warm space where rhythm, music and story come together."),
 }
+SITE_KEYS = ("bg_color", "about_title", "about_text", "music_on")
+BG_PRESETS = [("#f6e7d2", "Sandalwood"), ("#fbf6ee", "Ivory"), ("#fdecd9", "Saffron cream"),
+              ("#f3e6f5", "Lotus"), ("#e8f1ea", "Tulsi"), ("#efe7dc", "Temple stone")]
 
 
 # ---------------------------------------------------------------- helpers
@@ -98,9 +115,22 @@ def normalize_phone(raw):
     return digits if 11 <= len(digits) <= 15 else None
 
 
+def parse_phone_list(raw):
+    """Numbers separated by commas, semicolons, slashes or new lines, or just spaces
+    (e.g. "98450 12345, +91 99000 11111" or "9845012345 9900011111")."""
+    phones = set()
+    for chunk in re.split(r"[,;/|\n]+", raw or ""):
+        p = normalize_phone(chunk)
+        if p:
+            phones.add(p)
+        else:
+            phones.update(q for q in (normalize_phone(x) for x in chunk.split()) if q)
+    return phones
+
+
 def admin_phones():
-    raw = os.environ.get("ADMIN_PHONES", "") + "," + setting("admin_phones")
-    return {p for p in (normalize_phone(x) for x in raw.split(",")) if p}
+    return parse_phone_list(os.environ.get("ADMIN_PHONES", "").strip().strip('"').strip("'")) | \
+        parse_phone_list(setting("admin_phones"))
 
 
 def current_period(d=None):
@@ -121,9 +151,11 @@ def save_upload(file_storage, kinds=("image", "video")):
     if not file_storage or not file_storage.filename:
         return None, None
     ext = file_storage.filename.rsplit(".", 1)[-1].lower() if "." in file_storage.filename else ""
-    media_type = "image" if ext in IMAGE_EXT else "video" if ext in VIDEO_EXT else None
+    media_type = ("image" if ext in IMAGE_EXT else "video" if ext in VIDEO_EXT
+                  else "audio" if ext in AUDIO_EXT else None)
     if media_type not in kinds:
-        flash("That file type isn't supported. Use JPG/PNG/WEBP images or MP4/WEBM videos.", "error")
+        names = {"image": "JPG/PNG/WEBP images", "video": "MP4/WEBM videos", "audio": "MP3/M4A/OGG music"}
+        flash("That file type isn't supported here. Use " + " or ".join(names[k] for k in kinds) + ".", "error")
         return None, None
     name = f"{int(time.time())}-{secrets.token_hex(3)}-{secure_filename(file_storage.filename)}"
     storage.save(file_storage, name)
@@ -132,14 +164,17 @@ def save_upload(file_storage, kinds=("image", "video")):
 
 # ---------------------------------------------------------------- WhatsApp
 
-def send_wa(to, body, kind="general", media=None, media_type=None):
+def send_wa(to, body, kind="general", media=None, media_type=None, otp=None):
     provider = whatsapp.get_provider()
     media_url = None
     if media:
         media_url = url_for_static(media)
         if media_url.startswith("/"):
             media_url = link(media_url) if PUBLIC_BASE_URL.startswith("https") else None
-    ok, err = provider.send(to, body, media_url=media_url, media_type=media_type)
+    if otp and hasattr(provider, "send_otp"):
+        ok, err = provider.send_otp(to, otp)
+    else:
+        ok, err = provider.send(to, body, media_url=media_url, media_type=media_type)
     db.execute(
         "INSERT INTO messages (to_phone, body, kind, provider, status, error) VALUES (?,?,?,?,?,?)",
         (to, body, kind, provider.name, "sent" if ok else "failed", err),
@@ -274,7 +309,11 @@ def login():
         if not phone:
             flash("Please enter a valid WhatsApp number.", "error")
         elif mode == "admin" and phone not in admin_phones():
-            flash("This number is not registered as an admin.", "error")
+            if admin_phones():
+                flash(f"{phone_fmt(phone)} is not on the admin list. Check the ADMIN_PHONES variable in Railway "
+                      "(numbers separated by commas) or ask another admin to add you in Settings.", "error")
+            else:
+                flash("No admin numbers are set up yet. Add ADMIN_PHONES in Railway, e.g. 98450 12345, 99000 11111.", "error")
         elif "code" in request.form:
             row = db.query("SELECT * FROM otps WHERE phone = ?", (phone,), one=True)
             code = re.sub(r"\D", "", request.form.get("code", ""))
@@ -307,7 +346,9 @@ def _send_otp(phone):
                sent_at = excluded.sent_at, attempts = 0""",
             (phone, code, time.time() + 600, time.time()),
         )
-        send_wa(phone, f"Your {setting('studio_name')} login code is {code}. It is valid for 10 minutes.", "otp")
+        if not send_wa(phone, f"Your {setting('studio_name')} login code is {code}. It is valid for 10 minutes.",
+                       "otp", otp=code):
+            flash("We couldn't send the WhatsApp code just now. Please try again in a minute.", "error")
     if whatsapp.get_provider().name == "console":
         flash(f"Demo mode (WhatsApp not connected yet): your code is {code}", "info")
 
@@ -406,11 +447,25 @@ def book_demo(user, demo):
 
 @app.route("/")
 def index():
-    if g.user:
+    if g.user and not request.args.get("preview"):
         return redirect(url_for("admin_home" if g.user["role"] == "admin" else "home"))
     classes, batches = active_classes()
-    return render_template("landing.html", classes=classes, batches=batches,
+    return render_template("landing.html", classes=classes, batches=batches, slides=carousel_slides(classes),
                            demos=upcoming_demos()[:4], promos=active_promotions())
+
+
+def carousel_slides(classes):
+    """Homepage carousel: the admin's slides, plus a slide for any active class that has none."""
+    rows = db.query("""SELECT s.*, c.name AS class_name, c.description AS class_desc, c.active AS class_active
+                       FROM slides s LEFT JOIN classes c ON c.id = s.class_id
+                       WHERE s.active = 1 ORDER BY s.sort, s.id""")
+    slides = [dict(r) for r in rows if r["class_id"] is None or r["class_active"]]
+    covered = {s["class_id"] for s in slides}
+    for c in classes:
+        if c["id"] not in covered and c["image"]:
+            slides.append({"media": c["image"], "media_type": "image", "caption": c["name"],
+                           "class_id": c["id"], "class_name": c["name"], "class_desc": c["description"]})
+    return slides
 
 
 # ---------------------------------------------------------------- customer
@@ -1174,6 +1229,83 @@ def admin_settings():
         flash("Settings saved.", "success")
         return redirect(url_for("admin_settings"))
     return render_template("admin/settings.html", env_admins=os.environ.get("ADMIN_PHONES", ""))
+
+
+def set_setting(key, value):
+    db.execute("INSERT INTO settings (key, value) VALUES (?, ?) "
+               "ON CONFLICT (key) DO UPDATE SET value = excluded.value", (key, value))
+
+
+@app.route("/admin/website", methods=["GET", "POST"])
+@admin_required
+def admin_site():
+    """Logo, background colour, music, the 'What Sanskriti means' text and the homepage carousel."""
+    if request.method == "POST":
+        action = request.form.get("action", "")
+        sid = request.form.get("slide_id", type=int)
+        if action == "look":
+            color = request.form.get("bg_color", "").strip()
+            if re.fullmatch(r"#[0-9a-fA-F]{6}", color):
+                set_setting("bg_color", color.lower())
+            set_setting("about_title", request.form.get("about_title", "").strip())
+            set_setting("about_text", request.form.get("about_text", "").strip().replace("\r\n", "\n"))
+            flash("Saved. Open the homepage to see it.", "success")
+        elif action == "logo":
+            name, _ = save_upload(request.files.get("file"), kinds=("image",))
+            if name:
+                set_setting("logo", name)
+                flash("Logo updated.", "success")
+        elif action == "logo_remove":
+            set_setting("logo", "")
+            flash("Logo removed.", "success")
+        elif action == "music":
+            name, _ = save_upload(request.files.get("file"), kinds=("audio",))
+            if name:
+                set_setting("music", name)
+                set_setting("music_on", "1")
+                flash("Music updated.", "success")
+        elif action == "music_default":
+            set_setting("music", DEFAULT_SETTINGS["music"])
+            set_setting("music_on", "1")
+            flash("Back to the default music.", "success")
+        elif action == "music_toggle":
+            set_setting("music_on", "0" if setting("music_on") == "1" else "1")
+            flash("Music turned " + ("on." if setting("music_on") == "1" else "off."), "success")
+        elif action == "slide_add":
+            name, kind = save_upload(request.files.get("file"))
+            if name:
+                top = db.query("SELECT COALESCE(MAX(sort), 0) AS m FROM slides", one=True)["m"]
+                db.execute("INSERT INTO slides (media, media_type, caption, class_id, sort) VALUES (?,?,?,?,?)",
+                           (name, kind, request.form.get("caption", "").strip(),
+                            request.form.get("class_id", type=int) or None, top + 1))
+                flash("Added to the carousel.", "success")
+        elif sid and action == "slide_save":
+            db.execute("UPDATE slides SET caption = ?, class_id = ? WHERE id = ?",
+                       (request.form.get("caption", "").strip(), request.form.get("class_id", type=int) or None, sid))
+            flash("Slide saved.", "success")
+        elif sid and action == "slide_replace":
+            name, kind = save_upload(request.files.get("file"))
+            if name:
+                db.execute("UPDATE slides SET media = ?, media_type = ? WHERE id = ?", (name, kind, sid))
+                flash("Photo/video replaced.", "success")
+        elif sid and action == "slide_toggle":
+            db.execute("UPDATE slides SET active = 1 - active WHERE id = ?", (sid,))
+        elif sid and action == "slide_delete":
+            db.execute("DELETE FROM slides WHERE id = ?", (sid,))
+            flash("Slide removed.", "success")
+        elif sid and action in ("slide_up", "slide_down"):
+            order = [r["id"] for r in db.query("SELECT id FROM slides ORDER BY sort, id")]
+            i = order.index(sid) if sid in order else -1
+            j = i - 1 if action == "slide_up" else i + 1
+            if i >= 0 and 0 <= j < len(order):
+                order[i], order[j] = order[j], order[i]
+                for n, x in enumerate(order):
+                    db.execute("UPDATE slides SET sort = ? WHERE id = ?", (n, x))
+        return redirect(url_for("admin_site") + request.form.get("anchor", ""))
+    slides = db.query("""SELECT s.*, c.name AS class_name FROM slides s LEFT JOIN classes c ON c.id = s.class_id
+                         ORDER BY s.sort, s.id""")
+    classes = db.query("SELECT id, name FROM classes ORDER BY name")
+    return render_template("admin/website.html", slides=slides, classes=classes, presets=BG_PRESETS)
 
 
 # ---------------------------------------------------------------- errors & CLI

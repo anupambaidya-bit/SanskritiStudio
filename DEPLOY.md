@@ -24,14 +24,14 @@ About 30 minutes. You need accounts on GitHub, Supabase and Railway. Cloudflare 
    | Variable | Value |
    |---|---|
    | `SECRET_KEY` | a long random string (e.g. from a password generator) |
-   | `ADMIN_PHONES` | your WhatsApp number(s), comma separated |
+   | `ADMIN_PHONES` | admin WhatsApp numbers, separated by commas, e.g. `98450 12345, 99000 11111` |
    | `PUBLIC_BASE_URL` | `https://sanskritistudy.com` |
    | `TZ` | `Asia/Kolkata` |
    | `DATABASE_URL` | from step 2.2 |
    | `SUPABASE_URL` | from step 2.4 |
    | `SUPABASE_SERVICE_KEY` | from step 2.4 |
    | `SEED_SAMPLE_DATA` | `0` for an empty start, `1` to start with the sample classes |
-   | `WHATSAPP_PROVIDER` | `console` for now (see README for Twilio / Meta) |
+   | `WHATSAPP_PROVIDER` | `msg91` (same as NyayaMitra), then add `MSG91_AUTH_KEY` with NyayaMitra's MSG91 auth key. Leave as `console` to show login codes on screen while testing. |
 
 3. Railway redeploys. Open **Settings → Networking → Generate Domain** to get a `*.up.railway.app` link and check the site works there. Log in with an admin number; in demo mode the code shows on screen.
 

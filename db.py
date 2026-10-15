@@ -15,7 +15,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SCHEMA = os.path.join(BASE_DIR, "schema.sql")
 # Tables whose primary key is a generated integer `id` (INSERTs return it).
 ID_TABLES = {"users", "classes", "batches", "demos", "enrollments", "feedback",
-             "payments", "promotions", "messages"}
+             "payments", "promotions", "messages", "slides"}
 _INSERT_TABLE = re.compile(r"^\s*INSERT\s+INTO\s+(\w+)", re.I)
 
 
@@ -122,6 +122,10 @@ def init_db(app, seed=True):
         conn.execute(stmt)
     if fresh and seed:
         seed_sample_data(conn)
+    # RETURNING tells us whether this process claimed the flag (two workers start at once).
+    if conn.query("INSERT INTO settings (key, value) VALUES ('slides_seeded', '1') "
+                  "ON CONFLICT (key) DO NOTHING RETURNING key"):
+        seed_slides(conn)
     conn.commit()
     conn.close()
 
@@ -182,3 +186,19 @@ def seed_sample_data(conn):
          "seed-reel.mp4", "video", None),
     ]:
         conn.execute("INSERT INTO promotions (title, body, media, media_type, class_id) VALUES (?,?,?,?,?)", row)
+
+
+def seed_slides(conn):
+    """Studio photos for the homepage carousel, linked to classes by name when they exist.
+    Added once (also on sites created before the carousel existed); edit them in Admin → Website."""
+    ids = {r["name"].lower(): r["id"] for r in conn.query("SELECT id, name FROM classes")}
+    for i, (media, caption, cls) in enumerate([
+        ("seed-slide-odissi-four.jpg", "Grace in every tribhangi", "odissi"),
+        ("seed-slide-bharatanatyam-solo.jpg", "Rhythm, line and story", "bharatanatyam"),
+        ("seed-hero.jpg", "Classical dance for every age", None),
+        ("seed-slide-odissi-group.jpg", "Our Odissi family", "odissi"),
+        ("seed-performance.jpg", "A playful first step into dance", "kids classical foundation"),
+        ("seed-slide-award.jpg", "Celebrating our dancers", None),
+    ]):
+        conn.execute("INSERT INTO slides (media, media_type, caption, class_id, sort) VALUES (?,?,?,?,?)",
+                     (media, "image", caption, ids.get(cls) if cls else None, i))

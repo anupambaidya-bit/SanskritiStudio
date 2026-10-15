@@ -40,7 +40,7 @@ Step by step: [DEPLOY.md](DEPLOY.md).
 ## What needs real accounts or credentials
 | Feature | Now | To make it real |
 |---|---|---|
-| WhatsApp login codes and messages | Demo mode: logged, not sent | **Twilio**: set `WHATSAPP_PROVIDER=twilio`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`. **Or Meta WhatsApp Business Cloud API**: `WHATSAPP_PROVIDER=meta`, `META_WA_TOKEN`, `META_WA_PHONE_NUMBER_ID`. |
+| WhatsApp login codes and messages | Demo mode: logged, not sent | **MSG91 (same as NyayaMitra)**: `WHATSAPP_PROVIDER=msg91`, `MSG91_AUTH_KEY`. Login codes use the approved OTP template (defaults to NyayaMitra's number and `nyayamitra_otp` template; override with `MSG91_WA_NUMBER`, `MSG91_OTP_TEMPLATE`, `MSG91_OTP_NAMESPACE`). Other messages go as plain text, which WhatsApp only delivers within 24 hours of the person messaging the number. **Twilio**: set `WHATSAPP_PROVIDER=twilio`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`. **Or Meta WhatsApp Business Cloud API**: `WHATSAPP_PROVIDER=meta`, `META_WA_TOKEN`, `META_WA_PHONE_NUMBER_ID`. |
 | WhatsApp message templates | Plain text | WhatsApp only allows free-text messages within 24 hours of the student's last message. For reminders and promotions sent outside that window, get message templates approved in Twilio or Meta. The code is in `whatsapp.py`. |
 | PhonePe / Google Pay | UPI deep links + QR to the UPI ID in Settings, confirmed by an admin | Put your real UPI ID in **Settings**. For automatic confirmation, add a payment gateway such as Razorpay, PhonePe PG or Cashfree later. |
 | Google Maps | Embed built from the place name in Settings | No key needed. Paste the exact place name or "lat,lng" in **Settings**. |
@@ -57,3 +57,12 @@ templates/     pages (admin pages in templates/admin)
 static/        style.css, app.js, uploads/ (sample photos)
 railway.json   Railway start command
 ```
+
+## Website look (Admin → Website)
+
+Admins can change the logo, background colour, the "What does Sanskriti mean?" text,
+the background music (MP3/M4A) and the homepage carousel photos and videos without
+touching code. The default music (`static/uploads/seed-music.mp3`) is an original soft
+tanpura-and-flute piece in raga Mohanam, generated for this site. Browsers only allow
+sound after a visitor's first tap or click, so the music starts then; visitors can turn
+it off with the ♪ button and the choice is remembered.

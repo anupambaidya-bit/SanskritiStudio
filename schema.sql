@@ -117,3 +117,14 @@ CREATE TABLE IF NOT EXISTS settings (
     key   TEXT PRIMARY KEY,
     value TEXT
 );
+
+-- Homepage carousel (Admin → Website).
+CREATE TABLE IF NOT EXISTS slides (
+    id          INTEGER PRIMARY KEY,
+    media       TEXT NOT NULL,                  -- uploaded file name
+    media_type  TEXT NOT NULL DEFAULT 'image',  -- image | video
+    caption     TEXT,
+    class_id    INTEGER REFERENCES classes(id) ON DELETE SET NULL,
+    sort        INTEGER NOT NULL DEFAULT 0,
+    active      INTEGER NOT NULL DEFAULT 1
+);

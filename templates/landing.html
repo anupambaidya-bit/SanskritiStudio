@@ -1,8 +1,29 @@
 {% extends 'base.html' %}
 {% from '_macros.html' import promo_card, demo_card, map_block with context %}
 {% block content %}
-<section class="hero">
+<section class="hero carousel" data-carousel aria-roledescription="carousel" aria-label="Sanskriti classes">
+  {% if slides %}
+  <div class="slides">
+    {% for sl in slides %}
+    <figure class="slide{{ ' active' if loop.first }}" aria-roledescription="slide" aria-label="{{ loop.index }} of {{ slides|length }}">
+      {% if sl.media_type == 'video' %}
+        <video src="{{ media_url(sl.media) }}" muted loop playsinline preload="metadata" {{ 'autoplay' if loop.first }}></video>
+      {% else %}
+        <div class="slide-bg" style="background-image: url('{{ media_url(sl.media) }}')"></div>
+        <img src="{{ media_url(sl.media) }}" alt="{{ sl.caption or sl.class_name or 'Sanskriti dancers' }}" {{ 'loading=lazy' if not loop.first }}>
+      {% endif %}
+      {% if sl.caption or sl.class_name %}
+      <figcaption class="slide-cap">
+        {% if sl.class_name %}<b>{{ sl.class_name }}</b>{% endif %}
+        {% if sl.caption and sl.caption != sl.class_name %}<span>{{ sl.caption }}</span>{% endif %}
+      </figcaption>
+      {% endif %}
+    </figure>
+    {% endfor %}
+  </div>
+  {% else %}
   <img src="{{ media_url('seed-hero.jpg') }}" alt="Sanskriti students in performance costume">
+  {% endif %}
   <div class="hero-text">
     <h1>Classical dance at {{ setting('studio_name') }}</h1>
     <p>Odissi, Bharatanatyam and more at Ragam Gardens. Join with your WhatsApp number and book a free demo in a minute.</p>
@@ -11,7 +32,22 @@
       <a class="btn btn-ghost btn-lg light" href="{{ url_for('login', **{'as': 'admin'}) }}">Admin login</a>
     </div>
   </div>
+  {% if slides|length > 1 %}
+  <button type="button" class="car-btn car-prev" data-prev aria-label="Previous photo">‹</button>
+  <button type="button" class="car-btn car-next" data-next aria-label="Next photo">›</button>
+  <div class="car-dots">{% for sl in slides %}<button type="button" data-go="{{ loop.index0 }}" class="{{ 'active' if loop.first }}" aria-label="Show photo {{ loop.index }}"></button>{% endfor %}</div>
+  {% endif %}
 </section>
+
+{% if setting('about_text') %}
+<section class="section about card">
+  <div class="about-word" aria-hidden="true">संस्कृति</div>
+  <div>
+    <h2>{{ setting('about_title') }}</h2>
+    {% for para in setting('about_text').split('\n') if para.strip() %}<p>{{ para }}</p>{% endfor %}
+  </div>
+</section>
+{% endif %}
 
 {% if demos %}
 <section class="section">

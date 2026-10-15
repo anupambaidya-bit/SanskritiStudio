@@ -8,19 +8,20 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% if setting('logo') %}<link rel="icon" href="{{ media_url(setting('logo')) }}">{% endif %}
 </head>
 {% set is_admin = g.user and g.user.role == 'admin' %}
-<body class="{{ 'admin' if is_admin }} {{ 'has-bottomnav' if g.user and not is_admin }}">
+<body class="{{ 'admin' if is_admin }} {{ 'has-bottomnav' if g.user and not is_admin }}" style="--bg: {{ setting('bg_color') or '#f6e7d2' }}">
 <header class="topbar">
   <div class="topbar-inner">
     <a class="brand" href="{{ url_for('index') }}">
-      <span class="brand-mark">स</span>
+      {% if setting('logo') %}<img class="brand-logo" src="{{ media_url(setting('logo')) }}" alt="Sanskriti logo">{% else %}<span class="brand-mark">स</span>{% endif %}
       <span><span class="brand-name">Sanskriti</span><span class="brand-sub">{{ 'Admin' if is_admin else 'Studio · Ragam Gardens' }}</span></span>
     </a>
     {% if g.user %}
       <nav class="topnav">
         {% if is_admin %}
-          {% set nav = [('admin_home','Funnel'),('admin_classes','Classes'),('admin_promotions','Promotions'),('calendar_view','Calendar'),('admin_people','People'),('admin_messages','Messages'),('admin_settings','Settings')] %}
+          {% set nav = [('admin_home','Funnel'),('admin_classes','Classes'),('admin_promotions','Promotions'),('calendar_view','Calendar'),('admin_people','People'),('admin_messages','Messages'),('admin_site','Website'),('admin_settings','Settings')] %}
         {% else %}
           {% set nav = [('home','Home'),('calendar_view','Calendar'),('profile','Profile')] %}
         {% endif %}
@@ -56,6 +57,12 @@
 <footer class="footer">
   {{ setting('studio_name') }} · {{ setting('address') }} · <a href="{{ maps_link }}" target="_blank" rel="noopener">Directions</a>
 </footer>
+{% if not is_admin and setting('music_on') == '1' and setting('music') %}
+<audio id="bgm" src="{{ media_url(setting('music')) }}" loop preload="auto"></audio>
+<button type="button" id="bgm-toggle" class="bgm-toggle" aria-pressed="false" title="Music on / off">
+  <span class="bgm-icon" aria-hidden="true">♪</span><span class="bgm-label">Music</span>
+</button>
+{% endif %}
 <script src="{{ url_for('static', filename='app.js') }}"></script>
 {% block scripts %}{% endblock %}
 </body>
